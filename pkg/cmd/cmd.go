@@ -23,7 +23,7 @@ const (
 
 func NewCommand() *cobra.Command {
 	c := &cobra.Command{
-		Use:  "kubetrigger",
+		Use:  "mtda",
 		Long: cmdLongHelp,
 		RunE: runCli,
 	}
