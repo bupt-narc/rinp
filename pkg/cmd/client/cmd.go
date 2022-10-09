@@ -12,14 +12,19 @@ const (
 	flagPort      = "port"
 	flagPortShort = "p"
 	flagPortUsage = "Listening port"
+
+	flagLogLevel      = "log-level"
+	flagLogLevelUsage = "Log level"
 )
 
 const (
-	envStrPort = "PORT"
+	envStrPort     = "PORT"
+	envStrLogLevel = "LOG_LEVEL"
 )
 
 const (
-	defaultPort = 8080
+	defaultPort     = 8080
+	defaultLogLevel = "info"
 )
 
 const (
@@ -58,5 +63,6 @@ func NewVersionCommand() *cobra.Command {
 }
 
 func addFlags(f *pflag.FlagSet) {
+	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
 	f.IntP(flagPort, flagPortShort, defaultPort, flagPortUsage)
 }
