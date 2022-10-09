@@ -8,7 +8,7 @@ else
 endif
 
 # The binaries to build
-BINS ?= mtda
+BINS ?= client
 
 # The platforms we support.  In theory this can be used for Windows platforms,
 # too, but they require specific base images, which we do not have.
@@ -42,12 +42,12 @@ MAKEFLAGS += --warn-undefined-variables
 .SUFFIXES:
 
 # Used internally.  Users should pass GOOS and/or GOARCH.
-OS := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
+OS   := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
 ARCH := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
 
 TAG := $(VERSION)__$(OS)_$(ARCH)
 
-GO_VERSION := 1.19
+GO_VERSION  := 1.18
 BUILD_IMAGE := golang:$(GO_VERSION)-alpine
 
 BIN_EXTENSION :=
@@ -62,9 +62,10 @@ SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
 BUILDX_NAME := $(shell basename $$(pwd))
 
 # Satisfy --warn-undefined-variables.
-GOFLAGS ?=
-HTTP_PROXY ?=
+GOFLAGS     ?=
+HTTP_PROXY  ?=
 HTTPS_PROXY ?=
+GOPROXY     ?=
 
 # If you want to build all binaries, see the 'all-build' rule.
 # If you want to build all containers, see the 'all-container' rule.
@@ -147,7 +148,7 @@ $(STAMPS): go-build
 
 # This runs the actual `go build` which updates all binaries.
 go-build: | $(BUILD_DIRS)
-	echo "# building for $(OS)/$(ARCH)"
+	echo "# building for $(OS)/$(ARCH), version $(VERSION)"
 	docker run                                                  \
 	    -i                                                      \
 	    --rm                                                    \
@@ -165,6 +166,7 @@ go-build: | $(BUILD_DIRS)
 	    --env GOFLAGS="$(GOFLAGS)"                              \
 	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
 	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
+	    --env GOPROXY="$(GOPROXY)"                              \
 	    $(BUILD_IMAGE)                                          \
 	    ./build/build.sh ./...
 
@@ -189,6 +191,7 @@ shell: | $(BUILD_DIRS)
 	    --env GOFLAGS="$(GOFLAGS)"                              \
 	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
 	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
+	    --env GOPROXY="$(GOPROXY)"                              \
 	    $(BUILD_IMAGE)                                          \
 	    /bin/sh $(CMD)
 
@@ -234,9 +237,9 @@ $(CONTAINER_DOTFILES): .buildx-initialized
 	    -e 's|{ARG_FROM}|$(BASE_IMAGE)|g'          \
 	    Dockerfile.in > .dockerfile-$(BIN)-$(OS)_$(ARCH)
 	HASH_LICENSES=$$(find $(LICENSES) -type f                       \
-		    | xargs md5sum | md5sum | cut -f1 -d' ');           \
+		    | xargs md5sum | md5sum | cut -f1 -d' ');               \
 	HASH_BINARY=$$(md5sum bin/$(OS)_$(ARCH)/$(BIN)$(BIN_EXTENSION)  \
-		    | cut -f1 -d' ');                                   \
+		    | cut -f1 -d' ');                                       \
 	FORCE=0;                                                        \
 	docker buildx build                                             \
 	    --builder "$(BUILDX_NAME)"                                  \
@@ -302,6 +305,7 @@ test: | $(BUILD_DIRS)
 	    --env GOFLAGS="$(GOFLAGS)"                              \
 	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
 	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
+	    --env GOPROXY="$(GOPROXY)"                              \
 	    $(BUILD_IMAGE)                                          \
 	    ./build/test.sh ./...
 
@@ -324,6 +328,7 @@ lint: | $(BUILD_DIRS)
 	    --env GOFLAGS="$(GOFLAGS)"                              \
 	    --env HTTP_PROXY="$(HTTP_PROXY)"                        \
 	    --env HTTPS_PROXY="$(HTTPS_PROXY)"                      \
+	    --env GOPROXY="$(GOPROXY)"                              \
 	    $(BUILD_IMAGE)                                          \
 	    ./build/lint.sh ./...
 

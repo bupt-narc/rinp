@@ -1,4 +1,4 @@
-package cmd
+package client
 
 import (
 	"fmt"
@@ -11,10 +11,6 @@ import (
 type Option struct {
 	Port int
 }
-
-const (
-	envStrPort = "PORT"
-)
 
 func NewOption() *Option {
 	return &Option{}
