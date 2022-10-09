@@ -35,9 +35,10 @@ Options have a priority like this: cli-flags > env > default-values`
 
 func NewCommand() *cobra.Command {
 	c := &cobra.Command{
-		Use:  "client",
-		Long: cmdLongHelp,
-		RunE: runCli,
+		Use:           "client",
+		Long:          cmdLongHelp,
+		SilenceErrors: true,
+		RunE:          runCli,
 	}
 	addFlags(c.Flags())
 	c.AddCommand(NewVersionCommand())

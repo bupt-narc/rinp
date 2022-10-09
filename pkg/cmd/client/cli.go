@@ -1,18 +1,19 @@
 package client
 
 import (
-	"fmt"
-	"net/http"
-
 	"github.com/pkg/errors"
+	"github.com/songgao/water"
 
-	"github.com/elazarl/goproxy"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
+var (
+	log = logrus.WithField("client", "init")
+)
+
 func runCli(cmd *cobra.Command, args []string) error {
-	opt, err := NewOption().
+	_, err := NewOption().
 		WithDefaults().
 		WithEnvVariables().
 		WithCliFlags(cmd.Flags()).
@@ -21,10 +22,24 @@ func runCli(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "error when paring flags")
 	}
 
-	proxy := goproxy.NewProxyHttpServer()
-	proxy.Verbose = true
+	ifce, err := water.New(water.Config{
+		DeviceType: water.TUN,
+	})
+	if err != nil {
+		return errors.Wrap(err, "cannot create TUN device")
+	}
 
-	logrus.Infof("listening on port %d", opt.Port)
+	log.Infof("created TUN device: %s", ifce.Name())
 
-	return http.ListenAndServe(fmt.Sprintf(":%d", opt.Port), proxy)
+	packet := make([]byte, 2000)
+	for {
+		n, err := ifce.Read(packet)
+		if err != nil {
+			log.Errorf("cannot read packet: %s", err)
+			continue
+		}
+		log.Printf("received packet: %x\n", packet[:n])
+	}
+
+	return nil
 }
