@@ -146,6 +146,8 @@ $(STAMPS): go-build
 	    echo "(cached)";                       \
 	fi
 
+# TODO(charlie0129): add local-build to build binaries using local go sdk
+
 # This runs the actual `go build` which updates all binaries.
 go-build: | $(BUILD_DIRS)
 	echo "# building for $(OS)/$(ARCH), version $(VERSION)"

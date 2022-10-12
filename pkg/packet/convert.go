@@ -25,7 +25,7 @@ const (
 
 var (
 	ErrInvalidVersion   = errors.New("invalid version")
-	ErrInvalidIPVersion = errors.New("invlid ip version")
+	ErrInvalidIPVersion = errors.New("invalid ip version")
 	ErrInvalidType      = errors.New("invalid type")
 )
 
@@ -68,6 +68,7 @@ func UnMarshal(in []byte, p *Packet) error {
 
 func Marshal(p Packet) ([]byte, error) {
 	// TODO(charlie0129): check validity
+	// TODO(charlie0129): normalize to big endian
 	byte0_1 := []byte{byte(int(p.PacketVersion) + int(p.IPVersion)<<3 + int(p.Type)<<4)}
 
 	byte1_5 := p.Src.To4()

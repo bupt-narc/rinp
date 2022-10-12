@@ -7,12 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/bupt-narc/rinp/pkg/packet"
+	"github.com/bupt-narc/rinp/pkg/overlay"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/pkg/errors"
-	"github.com/songgao/water"
-	"golang.org/x/net/ipv4"
-
 	"github.com/sirupsen/logrus"
+	"github.com/songgao/water"
 	"github.com/spf13/cobra"
 )
 
@@ -21,6 +21,22 @@ var (
 	tunLog    = logrus.WithField("client", "tun")
 	udpLog    = logrus.WithField("client", "udp")
 )
+
+var (
+	IPString = "10.10.10.1/24"
+	IP       net.IP
+	CIDR     *net.IPNet
+
+	ServerIPString = "127.0.0.1:2345"
+)
+
+func init() {
+	var err error
+	IP, CIDR, err = net.ParseCIDR(IPString)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func runCli(cmd *cobra.Command, args []string) error {
 	opt, err := NewOption().
@@ -36,13 +52,16 @@ func runCli(cmd *cobra.Command, args []string) error {
 	level, _ := logrus.ParseLevel(opt.LogLevel)
 	logrus.SetLevel(level)
 
-	ifce, err := water.New(water.Config{
-		DeviceType: water.TUN,
-	})
+	newTun, err := overlay.NewTun(tunLog.Logger, "mytun", CIDR, 1300, []overlay.Route{}, 500, false)
 	if err != nil {
-		return errors.Wrap(err, "cannot create TUN device")
+		return err
 	}
-	tunLog.Infof("created TUN device: %s", ifce.Name())
+	tunLog.Infof("created device")
+	err = newTun.Activate()
+	if err != nil {
+		return err
+	}
+	tunLog.Infof("activated device")
 
 	//_, err = runCmd("ip", "addr", "add", "10.255.255.1/24", "dev", ifce.Name())
 	//if err != nil {
@@ -55,7 +74,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 	//}
 
 	// Connect UDP
-	s, err := net.ResolveUDPAddr("udp4", "127.0.0.1:3456") // FIXME
+	s, err := net.ResolveUDPAddr("udp4", ServerIPString) // FIXME
 	if err != nil {
 		return err
 	}
@@ -67,7 +86,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 	udpLog.Infof("connected to udp server %s", c.RemoteAddr().String())
 	defer c.Close()
 
-	go readTUNAndWriteUDP(ifce, c)
+	go readTUNAndWriteUDP(newTun, c)
 
 	// Listen to termination signals.
 	sigterm := make(chan os.Signal, 1)
@@ -78,49 +97,27 @@ func runCli(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func readTUNAndWriteUDP(ifce *water.Interface, udpConn *net.UDPConn) {
+func readTUNAndWriteUDP(t *overlay.Tun, udpConn *net.UDPConn) {
 	buf := make([]byte, 2000)
 	for {
-		n, err := ifce.Read(buf)
+		n, err := t.Read(buf)
 		if err != nil {
 			tunLog.Errorf("cannot receive packet: %s", err)
 			continue
 		}
+		packetData := buf[:n]
 		tunLog.Infof("reveiced %d bytes", n)
-		tunLog.Debugf("received packet: %x", buf[:n])
+		tunLog.Debugf("received packet: %x", packetData)
 
-		header := ipv4.Header{}
-		err = header.Parse(buf[:n])
-		if err != nil {
-			packetLog.Errorf("cannot parse ipv4 header: %s", err)
-			continue
-		}
-		packetLog.Infof("packet is to %s", header.Dst.String())
-		packetLog.Debugf("%#v", header)
+		pkt := gopacket.NewPacket(packetData, layers.LayerTypeIPv4, gopacket.Lazy)
 
-		pkt := packet.Packet{
-			PacketVersion: packet.Version0,
-			IPVersion:     packet.IPv4,
-			Type:          packet.DataTransfer,
-			Src:           net.IPv4(127, 0, 0, 1),
-			SrcPort:       0,
-			Dst:           net.IPv4(127, 0, 0, 1),
-			DstPort:       0,
-			DataLength:    uint16(n),
-			Data:          buf[:n],
-		}
-		pktBytes, err := packet.Marshal(pkt)
-		if err != nil {
-			packetLog.Errorf("cannot marshal packet: %s", err)
-			return
-		}
+		tunLog.Infof("src: %s", pkt.NetworkLayer().NetworkFlow().Src().String())
+		tunLog.Infof("dst: %s", pkt.NetworkLayer().NetworkFlow().Dst().String())
 
-		n, err = udpConn.Write(pktBytes)
+		_, err = udpConn.Write(packetData)
 		if err != nil {
 			udpLog.Errorf("cannot send packet: %s", err)
 		}
-		udpLog.Infof("sent %d bytes", n)
-		udpLog.Debugf("sent packet: %x", pktBytes)
 	}
 }
 

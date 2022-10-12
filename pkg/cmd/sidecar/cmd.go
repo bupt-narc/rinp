@@ -1,4 +1,4 @@
-package client
+package sidecar
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ const (
 )
 
 const (
-	cmdLongHelp = `rinp-client is the client for RINP (RINP Is Not a Proxy).
+	cmdLongHelp = `rinp-sidecar is the client for RINP (RINP Is Not a Proxy).
 
 All command-line options can be specified as environment variables, which are defined by the command-line option, 
 capitalized, with all -’s replaced with _’s.
@@ -40,7 +40,7 @@ Options have a priority like this: cli-flags > env > default-values`
 
 func NewCommand() *cobra.Command {
 	c := &cobra.Command{
-		Use:          "client",
+		Use:          "sidecar",
 		Long:         cmdLongHelp,
 		SilenceUsage: true,
 		RunE:         runCli,
@@ -53,7 +53,7 @@ func NewCommand() *cobra.Command {
 func NewVersionCommand() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "version",
-		Short: "show rinp-client version and exit",
+		Short: "show rinp-sidecar version and exit",
 		Run: func(cmd *cobra.Command, args []string) {
 			//nolint:forbidigo // print version
 			fmt.Println(version.Version)
