@@ -215,19 +215,19 @@ func (t Tun) Activate() error {
 
 	// Set the device ip address
 	if err = ioctl(fd, unix.SIOCSIFADDR, uintptr(unsafe.Pointer(&ifra))); err != nil {
-		return fmt.Errorf("failed to set Tun address: %s", err)
+		return fmt.Errorf("failed to set tun address: %s", err)
 	}
 
 	// Set the device network
 	ifra.Addr.Addr = mask
 	if err = ioctl(fd, unix.SIOCSIFNETMASK, uintptr(unsafe.Pointer(&ifra))); err != nil {
-		return fmt.Errorf("failed to set Tun netmask: %s", err)
+		return fmt.Errorf("failed to set tun netmask: %s", err)
 	}
 
 	// Set the device name
 	ifrf := ifReq{Name: devName}
 	if err = ioctl(fd, unix.SIOCGIFFLAGS, uintptr(unsafe.Pointer(&ifrf))); err != nil {
-		return fmt.Errorf("failed to set Tun device name: %s", err)
+		return fmt.Errorf("failed to set tun device name: %s", err)
 	}
 
 	// Set the MTU on the device
@@ -241,19 +241,19 @@ func (t Tun) Activate() error {
 	ifrq := ifreqQLEN{Name: devName, Value: int32(t.TXQueueLen)}
 	if err = ioctl(fd, unix.SIOCSIFTXQLEN, uintptr(unsafe.Pointer(&ifrq))); err != nil {
 		// If we can't set the queue length nebula will still work but it may lead to packet loss
-		t.l.WithError(err).Error("Failed to set Tun tx queue length")
+		t.l.WithError(err).Error("Failed to set tun tx queue length")
 	}
 
 	// Bring up the interface
 	ifrf.Flags = ifrf.Flags | unix.IFF_UP
 	if err = ioctl(fd, unix.SIOCSIFFLAGS, uintptr(unsafe.Pointer(&ifrf))); err != nil {
-		return fmt.Errorf("failed to bring the Tun device up: %s", err)
+		return fmt.Errorf("failed to bring the tun device up: %s", err)
 	}
 
 	// Set the routes
 	link, err := netlink.LinkByName(t.Device)
 	if err != nil {
-		return fmt.Errorf("failed to get Tun device link: %s", err)
+		return fmt.Errorf("failed to get tun device link: %s", err)
 	}
 
 	// Default route
@@ -297,7 +297,7 @@ func (t Tun) Activate() error {
 	// Run the interface
 	ifrf.Flags = ifrf.Flags | unix.IFF_UP | unix.IFF_RUNNING
 	if err = ioctl(fd, unix.SIOCSIFFLAGS, uintptr(unsafe.Pointer(&ifrf))); err != nil {
-		return fmt.Errorf("failed to run Tun device: %s", err)
+		return fmt.Errorf("failed to run tun device: %s", err)
 	}
 
 	return nil

@@ -8,10 +8,10 @@ import (
 	"syscall"
 
 	"github.com/bupt-narc/rinp/pkg/overlay"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/bupt-narc/rinp/pkg/packet"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/slackhq/nebula/iputil"
 	"github.com/spf13/cobra"
 )
 
@@ -22,8 +22,17 @@ var (
 )
 
 var (
-	tunIP net.IP
+	tunIP    net.IP
+	ServerIP net.IP
+	UserCIDR *net.IPNet
 )
+
+func init() {
+	// Server actual IP
+	ServerIP = net.ParseIP("10.10.100.1")
+	// User actual IP
+	_, UserCIDR, _ = net.ParseCIDR("10.10.200.0/24")
+}
 
 func runCli(cmd *cobra.Command, args []string) error {
 	opt, err := NewOption().
@@ -39,14 +48,21 @@ func runCli(cmd *cobra.Command, args []string) error {
 	level, _ := logrus.ParseLevel(opt.LogLevel)
 	logrus.SetLevel(level)
 
-	tunIP, cidr, err := net.ParseCIDR("10.10.20.0/24")
+	// tun IP
+	tunIP, cidr, err := net.ParseCIDR("10.10.10.0/24")
 	if err != nil {
 		return err
 	}
 
 	tunLog.Infof("tun IP: %s", tunIP.String())
 
-	newTun, err := overlay.NewTun(tunLog.Logger, "mytunsrv", cidr, 1300, []overlay.Route{}, 500, false)
+	vpnIP := iputil.Ip2VpnIp(net.ParseIP("10.10.10.1").To4())
+	newTun, err := overlay.NewTun(tunLog.Logger, "mytunsrv", cidr, 1300, []overlay.Route{{
+		MTU:    1300,
+		Metric: 0,
+		Cidr:   UserCIDR,
+		Via:    &vpnIP,
+	}}, 500, false)
 	if err != nil {
 		return err
 	}
@@ -58,7 +74,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 	tunLog.Infof("activated device")
 
 	// Connect UDP
-	s, err := net.ResolveUDPAddr("udp4", ":2345")
+	s, err := net.ResolveUDPAddr("udp4", ":32000")
 	if err != nil {
 		return err
 	}
@@ -92,91 +108,68 @@ func readTUNAndWriteUDP(t *overlay.Tun, udpConn *net.UDPConn) {
 		tunLog.Infof("reveiced %d bytes", n)
 		tunLog.Debugf("received packet: %x", packetData)
 
-		pkt := gopacket.NewPacket(buf[:n], layers.LayerTypeIPv4, gopacket.Lazy)
-		ipLayer := pkt.Layer(layers.LayerTypeIPv4)
-		if ipLayer == nil {
-			tunLog.Errorf("not a ip layer packet")
-			continue
-		}
-
-		ip := ipLayer.(*layers.IPv4)
-		dst := ip.DstIP.String()
-		src := ip.SrcIP.String()
-		tunLog.Infof("src: %s", src)
-
-		dstIP := net.ParseIP("10.10.10.1")
-
-		tunLog.Infof("dst: %s, will be changed to %s", dst, dstIP.String())
-
-		ip.DstIP = dstIP
-
-		opts := gopacket.SerializeOptions{
-			ComputeChecksums: true,
-			FixLengths:       true,
-		}
-
-		newBuffer := gopacket.NewSerializeBuffer()
-		err = gopacket.SerializePacket(newBuffer, opts, pkt)
+		pkt, err := packet.NewFromLayer4Bytes(packetData)
 		if err != nil {
-			tunLog.Errorf("cannot serialize packet: %s", err)
+			tunLog.Errorf("error when parsing packet: %s", err)
 			continue
 		}
 
-		outgoingPacket := newBuffer.Bytes()
+		tunLog.Debugf("recv from tun, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+		//pkt.Modify(packet.ModifySrc(ServerIP))
+		tunLog.Debugf("udp packet out, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
 
-		_, err = udpConn.Write(outgoingPacket)
+		out, err := pkt.Serialize()
+		if err != nil {
+			tunLog.Errorf("error when serializeing packet: %s", err)
+			continue
+		}
+
+		_, err = udpConn.WriteToUDP(out, udpAddr)
+
 		if err != nil {
 			udpLog.Errorf("cannot send packet: %s", err)
 		}
 	}
 }
 
+var udpAddr *net.UDPAddr
+
 func readUDPAndSendTUN(t *overlay.Tun, udpConn *net.UDPConn) {
 	buf := make([]byte, 2000)
 	for {
-		n, _, err := udpConn.ReadFromUDP(buf)
+		var (
+			n   int
+			err error
+		)
+		n, udpAddr, err = udpConn.ReadFromUDP(buf)
 		if err != nil {
 			udpLog.Errorf("cannot receive packet: %s", err)
 			continue
 		}
-		udpLog.Debugf("reveived packet: %x", buf[:n])
+		packetData := buf[:n]
+		udpLog.Infof("reveiced %d bytes", n)
+		udpLog.Debugf("received packet: %x", packetData)
 
-		pkt := gopacket.NewPacket(buf[:n], layers.LayerTypeIPv4, gopacket.Lazy)
-		ipLayer := pkt.Layer(layers.LayerTypeIPv4)
-		if ipLayer == nil {
-			tunLog.Errorf("not a ip layer packet")
-			continue
-		}
-
-		ip := ipLayer.(*layers.IPv4)
-		dst := ip.DstIP.String()
-		src := ip.SrcIP.String()
-
-		srcIP := net.ParseIP("10.10.20.1")
-
-		tunLog.Infof("src: %s, will be changed to %s", src, srcIP.String())
-		tunLog.Infof("dst: %s", dst)
-
-		ip.SrcIP = srcIP
-
-		opts := gopacket.SerializeOptions{
-			ComputeChecksums: true,
-			FixLengths:       true,
-		}
-
-		newBuffer := gopacket.NewSerializeBuffer()
-		err = gopacket.SerializePacket(newBuffer, opts, pkt)
+		pkt, err := packet.NewFromLayer4Bytes(packetData)
 		if err != nil {
-			tunLog.Errorf("cannot serialize packet: %s", err)
+			udpLog.Errorf("error when parsing packet: %s", err)
 			continue
 		}
 
-		outgoingPacket := newBuffer.Bytes()
+		udpLog.Debugf("recv from udp, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+		udpLog.Debugf("srcPort: %s, dstPort: %s", pkt.GetSrcPort(), pkt.GetDstPort())
 
-		_, err = t.Write(outgoingPacket)
+		out, err := pkt.Serialize()
+		if err != nil {
+			udpLog.Errorf("error when serializing packet: %s", err)
+			continue
+		}
+
+		n, err = t.Write(out)
 		if err != nil {
 			tunLog.Errorf("cannot write outgoing packet: %s", err)
 		}
+		tunLog.Debugf("written %d bytes", n)
 	}
 }
 

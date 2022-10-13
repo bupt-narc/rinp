@@ -37,14 +37,14 @@ func makeRouteTree(l *logrus.Logger, routes []Route, allowMTU bool) (*cidr.Tree4
 func parseRoutes(c *config.C, network *net.IPNet) ([]Route, error) {
 	var err error
 
-	r := c.Get("Tun.routes")
+	r := c.Get("tun.routes")
 	if r == nil {
 		return []Route{}, nil
 	}
 
 	rawRoutes, ok := r.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Tun.routes is not an array")
+		return nil, fmt.Errorf("tun.routes is not an array")
 	}
 
 	if len(rawRoutes) < 1 {
@@ -107,14 +107,14 @@ func parseRoutes(c *config.C, network *net.IPNet) ([]Route, error) {
 func parseUnsafeRoutes(c *config.C, network *net.IPNet) ([]Route, error) {
 	var err error
 
-	r := c.Get("Tun.unsafe_routes")
+	r := c.Get("tun.unsafe_routes")
 	if r == nil {
 		return []Route{}, nil
 	}
 
 	rawRoutes, ok := r.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Tun.unsafe_routes is not an array")
+		return nil, fmt.Errorf("tun.unsafe_routes is not an array")
 	}
 
 	if len(rawRoutes) < 1 {

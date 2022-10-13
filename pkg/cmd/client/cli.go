@@ -8,11 +8,10 @@ import (
 	"syscall"
 
 	"github.com/bupt-narc/rinp/pkg/overlay"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/bupt-narc/rinp/pkg/packet"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/songgao/water"
+	"github.com/slackhq/nebula/iputil"
 	"github.com/spf13/cobra"
 )
 
@@ -23,11 +22,12 @@ var (
 )
 
 var (
-	IPString = "10.10.10.1/24"
-	IP       net.IP
-	CIDR     *net.IPNet
-
-	ServerIPString = "127.0.0.1:2345"
+	UserIP         net.IP
+	IPString       = "10.10.20.0/24"
+	IP             net.IP
+	CIDR           *net.IPNet
+	ServerCIDR     *net.IPNet
+	ServerIPString = "172.17.0.2:32000"
 )
 
 func init() {
@@ -36,6 +36,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	// User actual IP
+	UserIP = net.ParseIP("10.10.200.1")
+	// Server exposed IP
+	_, ServerCIDR, _ = net.ParseCIDR("10.10.100.0/24")
 }
 
 func runCli(cmd *cobra.Command, args []string) error {
@@ -52,7 +56,13 @@ func runCli(cmd *cobra.Command, args []string) error {
 	level, _ := logrus.ParseLevel(opt.LogLevel)
 	logrus.SetLevel(level)
 
-	newTun, err := overlay.NewTun(tunLog.Logger, "mytun", CIDR, 1300, []overlay.Route{}, 500, false)
+	vpnIP := iputil.Ip2VpnIp(net.ParseIP("10.10.20.1").To4())
+	newTun, err := overlay.NewTun(tunLog.Logger, "mytun", CIDR, 1300, []overlay.Route{{
+		MTU:    1300,
+		Metric: 0,
+		Cidr:   ServerCIDR,
+		Via:    &vpnIP,
+	}}, 500, false)
 	if err != nil {
 		return err
 	}
@@ -62,7 +72,6 @@ func runCli(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	tunLog.Infof("activated device")
-
 	//_, err = runCmd("ip", "addr", "add", "10.255.255.1/24", "dev", ifce.Name())
 	//if err != nil {
 	//	return errors.Wrapf(err, "cannot add address to %s", ifce.Name())
@@ -87,6 +96,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 	defer c.Close()
 
 	go readTUNAndWriteUDP(newTun, c)
+	go readUDPAndSendTUN(newTun, c)
 
 	// Listen to termination signals.
 	sigterm := make(chan os.Signal, 1)
@@ -109,19 +119,30 @@ func readTUNAndWriteUDP(t *overlay.Tun, udpConn *net.UDPConn) {
 		tunLog.Infof("reveiced %d bytes", n)
 		tunLog.Debugf("received packet: %x", packetData)
 
-		pkt := gopacket.NewPacket(packetData, layers.LayerTypeIPv4, gopacket.Lazy)
+		pkt, err := packet.NewFromLayer4Bytes(packetData)
+		if err != nil {
+			tunLog.Errorf("error when parsing packet: %s", err)
+			continue
+		}
 
-		tunLog.Infof("src: %s", pkt.NetworkLayer().NetworkFlow().Src().String())
-		tunLog.Infof("dst: %s", pkt.NetworkLayer().NetworkFlow().Dst().String())
+		tunLog.Debugf("recv from tun, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+		pkt.Modify(packet.ModifySrc(UserIP))
+		tunLog.Debugf("udp packet out, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
 
-		_, err = udpConn.Write(packetData)
+		out, err := pkt.Serialize()
+		if err != nil {
+			tunLog.Errorf("error when serializing packet: %s", err)
+			continue
+		}
+
+		_, err = udpConn.Write(out)
 		if err != nil {
 			udpLog.Errorf("cannot send packet: %s", err)
 		}
 	}
 }
 
-func readUDPAndSendTUN(ifce *water.Interface, udpConn *net.UDPConn) {
+func readUDPAndSendTUN(t *overlay.Tun, udpConn *net.UDPConn) {
 	buf := make([]byte, 2000)
 	for {
 		n, _, err := udpConn.ReadFromUDP(buf)
@@ -129,9 +150,28 @@ func readUDPAndSendTUN(ifce *water.Interface, udpConn *net.UDPConn) {
 			udpLog.Errorf("cannot receive packet: %s", err)
 			continue
 		}
-		udpLog.Debugf("reveived packet: %x", buf[:n])
 
-		n, err = ifce.Write(buf[:n])
+		packetData := buf[:n]
+		udpLog.Infof("reveiced %d bytes", n)
+		udpLog.Debugf("received packet: %x", packetData)
+
+		pkt, err := packet.NewFromLayer4Bytes(packetData)
+		if err != nil {
+			udpLog.Errorf("error when parsing packet: %s", err)
+			continue
+		}
+
+		udpLog.Debugf("recv from udp, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+		//pkt.Modify(packet.ModifyDst(net.ParseIP("127.0.0.1")))
+		udpLog.Debugf("tun packet out, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+
+		out, err := pkt.Serialize()
+		if err != nil {
+			udpLog.Errorf("error when serializing packet: %s", err)
+			continue
+		}
+
+		n, err = t.Write(out)
 		if err != nil {
 			tunLog.Errorf("cannot send packet: %s", err)
 		}
