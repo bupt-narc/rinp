@@ -87,6 +87,9 @@ func (c *ClientConn) Run(ctx context.Context) {
 		c.readUDPAndSendTUN()
 		close(ch)
 	}()
+	go func() {
+		c.stat()
+	}()
 
 	select {
 	case <-ch:
@@ -123,6 +126,7 @@ func (c *ClientConn) readTUNAndWriteUDP() {
 		if err != nil {
 			connLog.Errorf("cannot send packet: %s", err)
 		}
+		c.txBytes += uint64(n)
 	}
 }
 
@@ -153,5 +157,6 @@ func (c *ClientConn) readUDPAndSendTUN() {
 		if err != nil {
 			connLog.Errorf("cannot send packet: %s", err)
 		}
+		c.rxBytes += uint64(n)
 	}
 }

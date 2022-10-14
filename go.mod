@@ -16,6 +16,6 @@ require (
 
 require (
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20220913150850-18c4f4234207 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
 )

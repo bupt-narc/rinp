@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ClientPoolSize = 1024
+	clientPoolSize = 1024
 )
 
 type ServerConn struct {
@@ -58,7 +58,7 @@ func NewServerConn(
 		Conn: Conn{
 			tun: newTun,
 		},
-		clientPool: lru.NewSync[string, *net.UDPAddr](lru.WithCapacity(ClientPoolSize)),
+		clientPool: lru.NewSync[string, *net.UDPAddr](lru.WithCapacity(clientPoolSize)),
 	}
 
 	err = conn.SetListenPort(listenPort)
@@ -85,23 +85,26 @@ func (s *ServerConn) SetListenPort(port int) error {
 	return nil
 }
 
-func (c *ServerConn) Run(ctx context.Context) {
+func (s *ServerConn) Run(ctx context.Context) {
 	ch := make(chan struct{})
 	go func() {
-		c.readTUNAndWriteUDP()
+		s.readTUNAndWriteUDP()
 		close(ch)
 	}()
 	go func() {
-		c.readUDPAndSendTUN()
+		s.readUDPAndSendTUN()
 		close(ch)
+	}()
+	go func() {
+		s.stat()
 	}()
 
 	select {
 	case <-ch:
 		connLog.Infof("stopped reading")
 	case <-ctx.Done():
-		c.tun.Close()
-		c.udpConn.Close()
+		s.tun.Close()
+		s.udpConn.Close()
 	}
 }
 
@@ -135,6 +138,7 @@ func (s *ServerConn) readTUNAndWriteUDP() {
 			connLog.Errorf("cannot send packet: %s", err)
 		}
 		connLog.Debugf("written %d bytes to udp", n)
+		s.txBytes += uint64(n)
 	}
 }
 
@@ -178,5 +182,6 @@ func (s *ServerConn) readUDPAndSendTUN() {
 			connLog.Errorf("cannot write outgoing packet: %s", err)
 		}
 		connLog.Debugf("written %d bytes to tun", n)
+		s.rxBytes += uint64(n)
 	}
 }
