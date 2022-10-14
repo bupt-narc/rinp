@@ -1,7 +1,6 @@
 package overlay
 
 import (
-	"context"
 	"fmt"
 	"net"
 
@@ -66,6 +65,14 @@ func NewServerConn(
 		return nil, errors.Wrapf(err, "cannot set server address")
 	}
 
+	conn.SetRxFunc(func() {
+		conn.readUDPAndSendTUN()
+	})
+
+	conn.SetTxFunc(func() {
+		conn.readTUNAndWriteUDP()
+	})
+
 	connLog.Infof("server connection activated, severAddr=%s, clientRoutes=%v", serverIP, clientRoutes)
 
 	return conn, nil
@@ -85,34 +92,14 @@ func (s *ServerConn) SetListenPort(port int) error {
 	return nil
 }
 
-func (s *ServerConn) Run(ctx context.Context) {
-	ch := make(chan struct{})
-	go func() {
-		s.readTUNAndWriteUDP()
-		close(ch)
-	}()
-	go func() {
-		s.readUDPAndSendTUN()
-		close(ch)
-	}()
-	go func() {
-		s.stat()
-	}()
-
-	select {
-	case <-ch:
-		connLog.Infof("stopped reading")
-	case <-ctx.Done():
-		s.tun.Close()
-		s.udpConn.Close()
-	}
-}
-
 func (s *ServerConn) readTUNAndWriteUDP() {
 	buf := make([]byte, 2000)
 	for {
 		n, err := s.tun.Read(buf)
 		if err != nil {
+			if s.quit {
+				break
+			}
 			connLog.Errorf("cannot receive packet: %s", err)
 			continue
 		}
@@ -152,6 +139,9 @@ func (s *ServerConn) readUDPAndSendTUN() {
 		)
 		n, udpAddr, err = s.udpConn.ReadFromUDP(buf)
 		if err != nil {
+			if s.quit {
+				break
+			}
 			connLog.Errorf("cannot receive packet: %s", err)
 			continue
 		}

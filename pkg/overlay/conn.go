@@ -1,20 +1,13 @@
 package overlay
 
 import (
+	"context"
 	"net"
 	"time"
 
 	"github.com/bupt-narc/rinp/pkg/util/bytesize"
 	"github.com/sirupsen/logrus"
 )
-
-type Conn struct {
-	udpConn      *net.UDPConn
-	tun          *Tun
-	rxBytes      uint64
-	txBytes      uint64
-	lastStatTime time.Time
-}
 
 const (
 	DefaultMTU      = 1400
@@ -25,6 +18,50 @@ const (
 var (
 	connLog = logrus.WithField("overlay", "connection")
 )
+
+type Conn struct {
+	udpConn      *net.UDPConn
+	tun          *Tun
+	rxBytes      uint64
+	txBytes      uint64
+	lastStatTime time.Time
+	quit         bool
+	rxFunc       func()
+	txFunc       func()
+}
+
+func (c *Conn) Run(ctx context.Context) {
+	ch := make(chan struct{})
+	go func() {
+		c.rxFunc()
+		close(ch)
+	}()
+	go func() {
+		c.txFunc()
+		close(ch)
+	}()
+	go func() {
+		c.stat()
+	}()
+
+	select {
+	case <-ch:
+		connLog.Infof("stopped reading")
+	case <-ctx.Done():
+	}
+
+	c.quit = true
+	c.tun.Close()
+	c.udpConn.Close()
+}
+
+func (c *Conn) SetRxFunc(f func()) {
+	c.rxFunc = f
+}
+
+func (c *Conn) SetTxFunc(f func()) {
+	c.txFunc = f
+}
 
 func (c *Conn) stat() {
 	c.lastStatTime = time.Now()
