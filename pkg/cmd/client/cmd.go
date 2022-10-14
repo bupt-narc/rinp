@@ -9,12 +9,14 @@ import (
 )
 
 const (
-	flagPort      = "port"
-	flagPortShort = "p"
-	flagPortUsage = "Listening port"
-
 	flagLogLevel      = "log-level"
 	flagLogLevelUsage = "Log level"
+
+	flagServerAddress      = "server-address"
+	flagServerAddressShort = "s"
+
+	flagClientAddress      = "client-address"
+	flagClientAddressShort = "c"
 )
 
 const (
@@ -64,5 +66,6 @@ func NewVersionCommand() *cobra.Command {
 
 func addFlags(f *pflag.FlagSet) {
 	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
-	f.IntP(flagPort, flagPortShort, defaultPort, flagPortUsage)
+	f.StringP(flagServerAddress, flagServerAddressShort, "", "")
+	f.StringP(flagClientAddress, flagClientAddressShort, "", "")
 }

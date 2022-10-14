@@ -20,7 +20,6 @@ type Tun struct {
 	fd         int
 	Device     string
 	cidr       *net.IPNet
-	ip         net.IP
 	MaxMTU     int
 	DefaultMTU int
 	TXQueueLen int
@@ -61,30 +60,9 @@ type ifreqQLEN struct {
 	pad   [8]byte
 }
 
-func newTunFromFd(l *logrus.Logger, deviceFd int, cidr *net.IPNet, defaultMTU int, routes []Route, txQueueLen int) (*Tun, error) {
-	routeTree, err := makeRouteTree(l, routes, true)
-	if err != nil {
-		return nil, err
-	}
-
-	file := os.NewFile(uintptr(deviceFd), "/dev/net/tun")
-
-	return &Tun{
-		ReadWriteCloser: file,
-		fd:              int(file.Fd()),
-		Device:          "tun0",
-		cidr:            cidr,
-		DefaultMTU:      defaultMTU,
-		TXQueueLen:      txQueueLen,
-		Routes:          routes,
-		routeTree:       routeTree,
-		l:               l,
-	}, nil
-}
-
 func NewTun(l *logrus.Logger,
 	deviceName string,
-	cidr string,
+	cidr *net.IPNet,
 	defaultMTU int,
 	routes []Route,
 	txQueueLen int,
@@ -124,14 +102,11 @@ func NewTun(l *logrus.Logger,
 		return nil, err
 	}
 
-	_ip, _cidr, err := net.ParseCIDR(cidr)
-
 	return &Tun{
 		ReadWriteCloser: file,
 		fd:              int(file.Fd()),
 		Device:          name,
-		cidr:            _cidr,
-		ip:              _ip,
+		cidr:            cidr,
 		MaxMTU:          maxMTU,
 		DefaultMTU:      defaultMTU,
 		TXQueueLen:      txQueueLen,
@@ -213,7 +188,7 @@ func (t Tun) Activate() error {
 
 	var addr, mask [4]byte
 
-	copy(addr[:], t.ip.To4())
+	copy(addr[:], t.cidr.IP)
 	copy(mask[:], t.cidr.Mask)
 
 	ifra := ifreqAddr{

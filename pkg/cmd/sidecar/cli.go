@@ -1,6 +1,7 @@
 package sidecar
 
 import (
+	"context"
 	"net"
 	"os"
 	"os/exec"
@@ -8,10 +9,8 @@ import (
 	"syscall"
 
 	"github.com/bupt-narc/rinp/pkg/overlay"
-	"github.com/bupt-narc/rinp/pkg/packet"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/slackhq/nebula/iputil"
 	"github.com/spf13/cobra"
 )
 
@@ -47,138 +46,36 @@ func runCli(cmd *cobra.Command, args []string) error {
 	// Set log level. No need to check error, we validated it previously.
 	level, _ := logrus.ParseLevel(opt.LogLevel)
 	logrus.SetLevel(level)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		TimestampFormat: "15:04:05.000",
+		FullTimestamp:   true,
+	})
 
-	// tun IP
-	tunIP, _, err := net.ParseCIDR("10.10.10.1/32")
-	if err != nil {
-		return err
-	}
-
-	tunLog.Infof("tun IP: %s", tunIP.String())
-
-	vpnIP := iputil.Ip2VpnIp(tunIP.To4())
-	newTun, err := overlay.NewTun(
-		tunLog.Logger,
+	conn, err := overlay.NewServerConn(
 		"tun0",
-		"10.10.10.1/32",
-		1300,
-		[]overlay.Route{{
-			MTU:    1300,
-			Metric: 0,
-			Cidr:   UserCIDR,
-			Via:    &vpnIP,
-		}},
-		500,
-		false,
+		net.ParseIP("10.10.10.1"),
+		opt.Port,
+		[]string{"10.10.20.0/24"},
 	)
 	if err != nil {
-		return err
-	}
-	tunLog.Infof("created device")
-	err = newTun.Activate()
-	if err != nil {
-		return err
-	}
-	tunLog.Infof("activated device")
-
-	// Connect UDP
-	s, err := net.ResolveUDPAddr("udp4", ":32000")
-	if err != nil {
-		return err
+		return errors.Wrap(err, "cannot create connection")
 	}
 
-	connection, err := net.ListenUDP("udp4", s)
-	if err != nil {
-		return err
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	go readUDPAndSendTUN(newTun, connection)
-	go readTUNAndWriteUDP(newTun, connection)
+	go func() {
+		// Listen to termination signals.
+		sigterm := make(chan os.Signal, 1)
+		signal.Notify(sigterm, syscall.SIGTERM)
+		signal.Notify(sigterm, syscall.SIGINT)
+		<-sigterm
+		cancel()
+	}()
 
-	// Listen to termination signals.
-	sigterm := make(chan os.Signal, 1)
-	signal.Notify(sigterm, syscall.SIGTERM)
-	signal.Notify(sigterm, syscall.SIGINT)
-	<-sigterm
+	conn.Run(ctx)
 
 	return nil
-}
-
-func readTUNAndWriteUDP(t *overlay.Tun, udpConn *net.UDPConn) {
-	buf := make([]byte, 2000)
-	for {
-		n, err := t.Read(buf)
-		if err != nil {
-			tunLog.Errorf("cannot receive packet: %s", err)
-			continue
-		}
-		packetData := buf[:n]
-		tunLog.Infof("reveiced %d bytes", n)
-		tunLog.Debugf("received packet: %x", packetData)
-
-		pkt, err := packet.NewFromLayer4Bytes(packetData)
-		if err != nil {
-			tunLog.Errorf("error when parsing packet: %s", err)
-			continue
-		}
-
-		tunLog.Debugf("recv from tun, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
-		//pkt.Modify(packet.ModifySrc(ServerIP))
-		tunLog.Debugf("udp packet out, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
-
-		out, err := pkt.Serialize()
-		if err != nil {
-			tunLog.Errorf("error when serializeing packet: %s", err)
-			continue
-		}
-
-		_, err = udpConn.WriteToUDP(out, udpAddr)
-
-		if err != nil {
-			udpLog.Errorf("cannot send packet: %s", err)
-		}
-	}
-}
-
-var udpAddr *net.UDPAddr
-
-func readUDPAndSendTUN(t *overlay.Tun, udpConn *net.UDPConn) {
-	buf := make([]byte, 2000)
-	for {
-		var (
-			n   int
-			err error
-		)
-		n, udpAddr, err = udpConn.ReadFromUDP(buf)
-		if err != nil {
-			udpLog.Errorf("cannot receive packet: %s", err)
-			continue
-		}
-		packetData := buf[:n]
-		udpLog.Infof("reveiced %d bytes", n)
-		udpLog.Debugf("received packet: %x", packetData)
-
-		pkt, err := packet.NewFromLayer4Bytes(packetData)
-		if err != nil {
-			udpLog.Errorf("error when parsing packet: %s", err)
-			continue
-		}
-
-		udpLog.Debugf("recv from udp, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
-		udpLog.Debugf("srcPort: %s, dstPort: %s", pkt.GetSrcPort(), pkt.GetDstPort())
-
-		out, err := pkt.Serialize()
-		if err != nil {
-			udpLog.Errorf("error when serializing packet: %s", err)
-			continue
-		}
-
-		n, err = t.Write(out)
-		if err != nil {
-			tunLog.Errorf("cannot write outgoing packet: %s", err)
-		}
-		tunLog.Debugf("written %d bytes", n)
-	}
 }
 
 func runCmd(program string, args ...string) (*exec.Cmd, error) {

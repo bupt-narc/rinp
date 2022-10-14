@@ -24,7 +24,7 @@ const (
 
 const (
 	defaultPort     = 8080
-	defaultLogLevel = "debug"
+	defaultLogLevel = "trace"
 )
 
 const (
