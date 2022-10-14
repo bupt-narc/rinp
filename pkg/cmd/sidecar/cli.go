@@ -22,16 +22,16 @@ var (
 )
 
 var (
-	tunIP    net.IP
-	ServerIP net.IP
+	// tunIP net.IP
+	// ServerIP net.IP
 	UserCIDR *net.IPNet
 )
 
 func init() {
 	// Server actual IP
-	ServerIP = net.ParseIP("10.10.100.1")
+	//ServerIP = net.ParseIP("10.10.100.1")
 	// User actual IP
-	_, UserCIDR, _ = net.ParseCIDR("10.10.200.0/24")
+	_, UserCIDR, _ = net.ParseCIDR("10.10.20.0/24")
 }
 
 func runCli(cmd *cobra.Command, args []string) error {
@@ -49,20 +49,28 @@ func runCli(cmd *cobra.Command, args []string) error {
 	logrus.SetLevel(level)
 
 	// tun IP
-	tunIP, cidr, err := net.ParseCIDR("10.10.10.0/24")
+	tunIP, _, err := net.ParseCIDR("10.10.10.1/32")
 	if err != nil {
 		return err
 	}
 
 	tunLog.Infof("tun IP: %s", tunIP.String())
 
-	vpnIP := iputil.Ip2VpnIp(net.ParseIP("10.10.10.1").To4())
-	newTun, err := overlay.NewTun(tunLog.Logger, "mytunsrv", cidr, 1300, []overlay.Route{{
-		MTU:    1300,
-		Metric: 0,
-		Cidr:   UserCIDR,
-		Via:    &vpnIP,
-	}}, 500, false)
+	vpnIP := iputil.Ip2VpnIp(tunIP.To4())
+	newTun, err := overlay.NewTun(
+		tunLog.Logger,
+		"tun0",
+		"10.10.10.1/32",
+		1300,
+		[]overlay.Route{{
+			MTU:    1300,
+			Metric: 0,
+			Cidr:   UserCIDR,
+			Via:    &vpnIP,
+		}},
+		500,
+		false,
+	)
 	if err != nil {
 		return err
 	}

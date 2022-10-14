@@ -20,6 +20,7 @@ type Tun struct {
 	fd         int
 	Device     string
 	cidr       *net.IPNet
+	ip         net.IP
 	MaxMTU     int
 	DefaultMTU int
 	TXQueueLen int
@@ -81,7 +82,14 @@ func newTunFromFd(l *logrus.Logger, deviceFd int, cidr *net.IPNet, defaultMTU in
 	}, nil
 }
 
-func NewTun(l *logrus.Logger, deviceName string, cidr *net.IPNet, defaultMTU int, routes []Route, txQueueLen int, multiqueue bool) (*Tun, error) {
+func NewTun(l *logrus.Logger,
+	deviceName string,
+	cidr string,
+	defaultMTU int,
+	routes []Route,
+	txQueueLen int,
+	multiqueue bool,
+) (*Tun, error) {
 	fd, err := unix.Open("/dev/net/tun", os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
@@ -116,11 +124,14 @@ func NewTun(l *logrus.Logger, deviceName string, cidr *net.IPNet, defaultMTU int
 		return nil, err
 	}
 
+	_ip, _cidr, err := net.ParseCIDR(cidr)
+
 	return &Tun{
 		ReadWriteCloser: file,
 		fd:              int(file.Fd()),
 		Device:          name,
-		cidr:            cidr,
+		cidr:            _cidr,
+		ip:              _ip,
 		MaxMTU:          maxMTU,
 		DefaultMTU:      defaultMTU,
 		TXQueueLen:      txQueueLen,
@@ -190,11 +201,6 @@ func (t Tun) deviceBytes() (o [16]byte) {
 func (t Tun) Activate() error {
 	devName := t.deviceBytes()
 
-	var addr, mask [4]byte
-
-	copy(addr[:], t.cidr.IP.To4())
-	copy(mask[:], t.cidr.Mask)
-
 	s, err := unix.Socket(
 		unix.AF_INET,
 		unix.SOCK_DGRAM,
@@ -204,6 +210,11 @@ func (t Tun) Activate() error {
 		return err
 	}
 	fd := uintptr(s)
+
+	var addr, mask [4]byte
+
+	copy(addr[:], t.ip.To4())
+	copy(mask[:], t.cidr.Mask)
 
 	ifra := ifreqAddr{
 		Name: devName,

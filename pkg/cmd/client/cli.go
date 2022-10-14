@@ -19,11 +19,12 @@ var (
 	packetLog = logrus.WithField("client", "packet")
 	tunLog    = logrus.WithField("client", "tun")
 	udpLog    = logrus.WithField("client", "udp")
+	sendLog   = logrus.WithField("send", "FromTUNToUDP")
 )
 
 var (
-	UserIP         net.IP
-	IPString       = "10.10.20.0/24"
+	//UserIP         net.IP
+	IPString       = "10.10.20.1/32"
 	IP             net.IP
 	CIDR           *net.IPNet
 	ServerCIDR     *net.IPNet
@@ -37,9 +38,9 @@ func init() {
 		panic(err)
 	}
 	// User actual IP
-	UserIP = net.ParseIP("10.10.200.1")
+	//UserIP = net.ParseIP("10.10.200.1")
 	// Server exposed IP
-	_, ServerCIDR, _ = net.ParseCIDR("10.10.100.0/24")
+	_, ServerCIDR, _ = net.ParseCIDR("10.10.10.0/24")
 }
 
 func runCli(cmd *cobra.Command, args []string) error {
@@ -55,14 +56,27 @@ func runCli(cmd *cobra.Command, args []string) error {
 	// Set log level. No need to check error, we validated it previously.
 	level, _ := logrus.ParseLevel(opt.LogLevel)
 	logrus.SetLevel(level)
+	//logrus.SetReportCaller(true)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		TimestampFormat: "15:04:05.000",
+		FullTimestamp:   true,
+	})
 
-	vpnIP := iputil.Ip2VpnIp(net.ParseIP("10.10.20.1").To4())
-	newTun, err := overlay.NewTun(tunLog.Logger, "mytun", CIDR, 1300, []overlay.Route{{
-		MTU:    1300,
-		Metric: 0,
-		Cidr:   ServerCIDR,
-		Via:    &vpnIP,
-	}}, 500, false)
+	vpnIP := iputil.Ip2VpnIp(IP.To4())
+	newTun, err := overlay.NewTun(
+		tunLog.Logger,
+		"tun0",
+		IPString,
+		1300,
+		[]overlay.Route{{
+			MTU:    1300,
+			Metric: 0,
+			Cidr:   ServerCIDR,
+			Via:    &vpnIP,
+		}},
+		500,
+		false,
+	)
 	if err != nil {
 		return err
 	}
@@ -112,32 +126,32 @@ func readTUNAndWriteUDP(t *overlay.Tun, udpConn *net.UDPConn) {
 	for {
 		n, err := t.Read(buf)
 		if err != nil {
-			tunLog.Errorf("cannot receive packet: %s", err)
+			sendLog.Errorf("cannot receive packet: %s", err)
 			continue
 		}
 		packetData := buf[:n]
-		tunLog.Infof("reveiced %d bytes", n)
-		tunLog.Debugf("received packet: %x", packetData)
+		sendLog.Infof("reveiced %d bytes", n)
+		sendLog.Debugf("received packet: %x", packetData)
 
 		pkt, err := packet.NewFromLayer4Bytes(packetData)
 		if err != nil {
-			tunLog.Errorf("error when parsing packet: %s", err)
+			sendLog.Errorf("error when parsing packet: %s", err)
 			continue
 		}
 
-		tunLog.Debugf("recv from tun, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
-		pkt.Modify(packet.ModifySrc(UserIP))
-		tunLog.Debugf("udp packet out, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+		sendLog.Debugf("recv from tun, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+		//pkt.Modify(packet.ModifySrc(UserIP))
+		sendLog.Debugf("udp packet out, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
 
 		out, err := pkt.Serialize()
 		if err != nil {
-			tunLog.Errorf("error when serializing packet: %s", err)
+			sendLog.Errorf("error when serializing packet: %s", err)
 			continue
 		}
 
 		_, err = udpConn.Write(out)
 		if err != nil {
-			udpLog.Errorf("cannot send packet: %s", err)
+			sendLog.Errorf("cannot send packet: %s", err)
 		}
 	}
 }
