@@ -17,7 +17,7 @@ type Conn struct {
 }
 
 const (
-	DefaultMTU      = 1300
+	DefaultMTU      = 1400
 	statDuration    = 1 * time.Second
 	minimumStatSize = 1024
 )

@@ -4,21 +4,14 @@ import (
 	"context"
 	"net"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 
 	"github.com/bupt-narc/rinp/pkg/overlay"
+	"github.com/bupt-narc/rinp/pkg/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-)
-
-var (
-	packetLog = logrus.WithField("client", "packet")
-	tunLog    = logrus.WithField("client", "tun")
-	udpLog    = logrus.WithField("client", "udp")
-	sendLog   = logrus.WithField("send", "FromTUNToUDP")
 )
 
 func runCli(cmd *cobra.Command, args []string) error {
@@ -30,6 +23,8 @@ func runCli(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return errors.Wrap(err, "error when paring flags")
 	}
+
+	logrus.Info("rinp-client version %s", version.Version)
 
 	// Set log level. No need to check error, we validated it previously.
 	level, _ := logrus.ParseLevel(opt.LogLevel)
@@ -64,10 +59,4 @@ func runCli(cmd *cobra.Command, args []string) error {
 	conn.Run(ctx)
 
 	return nil
-}
-
-func runCmd(program string, args ...string) (*exec.Cmd, error) {
-	cmd := exec.Command(program, args...)
-	err := cmd.Run()
-	return cmd, err
 }
