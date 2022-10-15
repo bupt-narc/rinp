@@ -24,8 +24,6 @@ func runCli(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "error when paring flags")
 	}
 
-	logrus.Info("rinp-sidecar version %s", version.Version)
-
 	// Set log level. No need to check error, we validated it previously.
 	level, _ := logrus.ParseLevel(opt.LogLevel)
 	logrus.SetLevel(level)
@@ -34,11 +32,13 @@ func runCli(cmd *cobra.Command, args []string) error {
 		FullTimestamp:   true,
 	})
 
+	logrus.Info("rinp-sidecar version %s", version.Version)
+
 	conn, err := overlay.NewServerConn(
 		"tun0",
-		net.ParseIP("10.10.10.1"),
+		net.ParseIP("10.10.10.1"), // TODO make this configurable
 		opt.Port,
-		[]string{"10.10.20.0/24"},
+		[]string{"10.10.20.0/24"}, // TODO make this configurable
 	)
 	if err != nil {
 		return errors.Wrap(err, "cannot create connection")

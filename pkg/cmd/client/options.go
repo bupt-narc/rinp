@@ -11,7 +11,7 @@ import (
 type Option struct {
 	LogLevel      string
 	ServerAddress string
-	ClientAddress string
+	ClientAddress string // change name
 }
 
 func NewOption() *Option {

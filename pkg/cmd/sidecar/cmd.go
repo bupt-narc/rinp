@@ -23,12 +23,12 @@ const (
 )
 
 const (
-	defaultPort     = 8080
+	defaultPort     = 32000
 	defaultLogLevel = "info"
 )
 
 const (
-	cmdLongHelp = `rinp-sidecar is the client for RINP (RINP Is Not a Proxy).
+	cmdLongHelp = `rinp-sidecar is the service sidecar for RINP (RINP Is Not a Proxy).
 
 All command-line options can be specified as environment variables, which are defined by the command-line option, 
 capitalized, with all -’s replaced with _’s.

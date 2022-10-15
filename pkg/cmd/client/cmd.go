@@ -30,7 +30,7 @@ const (
 )
 
 const (
-	cmdLongHelp = `rinp-client is the client for RINP (RINP Is Not a Proxy).
+	cmdLongHelp = `rinp-client is the user client for RINP (RINP Is Not a Proxy).
 
 All command-line options can be specified as environment variables, which are defined by the command-line option, 
 capitalized, with all -’s replaced with _’s.
@@ -66,6 +66,6 @@ func NewVersionCommand() *cobra.Command {
 
 func addFlags(f *pflag.FlagSet) {
 	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
-	f.StringP(flagServerAddress, flagServerAddressShort, "", "")
-	f.StringP(flagClientAddress, flagClientAddressShort, "", "")
+	f.StringP(flagServerAddress, flagServerAddressShort, "", "") // TODO finish help
+	f.StringP(flagClientAddress, flagClientAddressShort, "", "") // TODO finish help
 }
