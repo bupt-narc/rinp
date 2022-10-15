@@ -12,21 +12,33 @@ const (
 	flagLogLevel      = "log-level"
 	flagLogLevelUsage = "Log level"
 
-	flagServerAddress      = "server-address"
-	flagServerAddressShort = "s"
+	flagProxyAddress      = "proxy-address"
+	flagProxyAddressShort = "p"
+	flagProxyAddressUsage = "The address of UDP proxy"
 
-	flagClientAddress      = "client-address"
-	flagClientAddressShort = "c"
+	flagClientVirtualIP      = "client-virtual-ip"
+	flagClientVirtualIPShort = "c"
+	flagClientVirtualIPUsage = "The virtual IP of this client"
+
+	flagServerCIDRs      = "server-virtual-cidrs"
+	flagServerCIDRsShort = "s"
+	flagServerCIDRsUsage = "The CIDRs of servers' virtual IP addresses"
+
+	flagEnablePProf      = "enable-pprof"
+	flagEnablePProfUsage = "Enable performance profiling at :8080/debug/pprof"
 )
 
 const (
-	envStrPort     = "PORT"
 	envStrLogLevel = "LOG_LEVEL"
+	// TODO
 )
 
-const (
-	defaultPort     = 8080
-	defaultLogLevel = "info"
+var (
+	defaultLogLevel        = "info"
+	defaultProxyAddress    = ""
+	defaultClientVirtualIP = ""
+	defualtServerCIDRs     = []string{}
+	defaultEnablePProf     = false
 )
 
 const (
@@ -66,6 +78,8 @@ func NewVersionCommand() *cobra.Command {
 
 func addFlags(f *pflag.FlagSet) {
 	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
-	f.StringP(flagServerAddress, flagServerAddressShort, "", "") // TODO finish help
-	f.StringP(flagClientAddress, flagClientAddressShort, "", "") // TODO finish help
+	f.StringP(flagProxyAddress, flagProxyAddressShort, defaultProxyAddress, flagProxyAddressUsage)
+	f.StringP(flagClientVirtualIP, flagClientVirtualIPShort, defaultClientVirtualIP, flagClientVirtualIPUsage)
+	f.StringArrayP(flagServerCIDRs, flagServerCIDRsShort, defualtServerCIDRs, flagServerCIDRsUsage)
+	f.Bool(flagEnablePProf, defaultEnablePProf, flagEnablePProfUsage)
 }

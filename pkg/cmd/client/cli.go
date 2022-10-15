@@ -2,7 +2,8 @@ package client
 
 import (
 	"context"
-	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -34,11 +35,17 @@ func runCli(cmd *cobra.Command, args []string) error {
 
 	logrus.Info("rinp-client version %s", version.Version)
 
+	// Performance profiling
+	if opt.EnablePProf {
+		logrus.Info("performance profiling enabled, http server listing at :8080/debug/pprof")
+		go http.ListenAndServe(":8080", nil)
+	}
+
 	conn, err := overlay.NewClientConn(
 		"tun0",
-		net.ParseIP(opt.ClientAddress),
-		[]string{"10.10.10.0/24"}, // TODO make this configurable
-		opt.ServerAddress,
+		opt.ClientVirtualIP,
+		opt.ServerCIDRs,
+		opt.ProxyAddress,
 	)
 	if err != nil {
 		return errors.Wrap(err, "cannot create connection to server")

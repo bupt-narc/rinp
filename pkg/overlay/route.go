@@ -31,18 +31,26 @@ func makeRouteTree(l *logrus.Logger, routes []Route, allowMTU bool) (*cidr.Tree4
 	return routeTree, nil
 }
 
-func stringToRoutes(str []string, via net.IP) ([]Route, error) {
-	var routes []Route
+func StringToCIDRs(str []string) ([]*net.IPNet, error) {
+	var ret []*net.IPNet
 	for _, r := range str {
 		_, cidr, err := net.ParseCIDR(r)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot parse %s", r)
 		}
+		ret = append(ret, cidr)
+	}
+	return ret, nil
+}
+
+func ipNetToRoutes(cidrs []*net.IPNet, via net.IP) ([]Route, error) {
+	var routes []Route
+	for _, r := range cidrs {
 		via := iputil.Ip2VpnIp(via.To4())
 		_r := Route{
 			MTU:    DefaultMTU,
 			Metric: 0,
-			Cidr:   cidr,
+			Cidr:   r,
 			Via:    &via,
 		}
 		routes = append(routes, _r)

@@ -2,16 +2,21 @@ package sidecar
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 
+	"github.com/bupt-narc/rinp/pkg/overlay"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 )
 
 type Option struct {
-	LogLevel string
-	Port     int
+	LogLevel        string
+	Port            int
+	ServerVirtualIP net.IP
+	ClientCIDRs     []*net.IPNet
+	EnablePProf     bool
 }
 
 func NewOption() *Option {
@@ -21,6 +26,9 @@ func NewOption() *Option {
 func (o *Option) WithDefaults() *Option {
 	o.Port = defaultPort
 	o.LogLevel = defaultLogLevel
+	o.ServerVirtualIP = net.IP(defaultServerVirtualIP)
+	o.ClientCIDRs, _ = overlay.StringToCIDRs(defaultClientCIDRs)
+	o.EnablePProf = defaultEnablePProf
 	return o
 }
 
@@ -31,15 +39,30 @@ func (o *Option) WithEnvVariables() *Option {
 	if v, ok := os.LookupEnv(envStrPort); ok && v != "" {
 		o.Port, _ = strconv.Atoi(v)
 	}
+	// TODO
 	return o
 }
 
 func (o *Option) WithCliFlags(flags *pflag.FlagSet) *Option {
+	if v, err := flags.GetInt(flagPort); err == nil && flags.Changed(flagPort) {
+		o.Port = v
+	}
 	if v, err := flags.GetString(flagLogLevel); err == nil && flags.Changed(flagLogLevel) {
 		o.LogLevel = v
 	}
-	if v, err := flags.GetInt(flagPort); err == nil && flags.Changed(flagPort) {
-		o.Port = v
+	if v, err := flags.GetString(flagServerVirtualIP); err == nil && flags.Changed(flagServerVirtualIP) {
+		o.ServerVirtualIP = net.ParseIP(v)
+	}
+	if v, err := flags.GetStringArray(flagClientCIDRs); err == nil && flags.Changed(flagClientCIDRs) {
+		cidrs, err := overlay.StringToCIDRs(v)
+		o.ClientCIDRs = cidrs
+		if err != nil {
+			logrus.Errorln(err)
+			o.ClientCIDRs = nil
+		}
+	}
+	if v, err := flags.GetBool(flagEnablePProf); err == nil && flags.Changed(flagEnablePProf) {
+		o.EnablePProf = v
 	}
 	return o
 }
@@ -52,6 +75,11 @@ func (o *Option) Validate() (*Option, error) {
 	if o.Port <= 0 {
 		return nil, fmt.Errorf("%s must be greater than 0", flagPort)
 	}
-
+	if o.ServerVirtualIP == nil {
+		return nil, fmt.Errorf("%s is not valid", flagServerVirtualIP)
+	}
+	if o.ClientCIDRs == nil {
+		return nil, fmt.Errorf("%s is not valid", flagClientCIDRs)
+	}
 	return o, nil
 }

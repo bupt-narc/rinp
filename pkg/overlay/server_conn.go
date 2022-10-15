@@ -23,9 +23,9 @@ func NewServerConn(
 	name string,
 	serverIP net.IP,
 	listenPort int,
-	clientRoutes []string,
+	clientRoutes []*net.IPNet,
 ) (*ServerConn, error) {
-	overlayRoutes, err := stringToRoutes(clientRoutes, serverIP)
+	overlayRoutes, err := ipNetToRoutes(clientRoutes, serverIP)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot parse routes")
 	}

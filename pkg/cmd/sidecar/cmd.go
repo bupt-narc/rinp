@@ -11,20 +11,35 @@ import (
 const (
 	flagPort      = "port"
 	flagPortShort = "p"
-	flagPortUsage = "Listening port"
+	flagPortUsage = "UDP listening port"
 
 	flagLogLevel      = "log-level"
 	flagLogLevelUsage = "Log level"
+
+	flagServerVirtualIP      = "server-virtual-ip"
+	flagServerVirtualIPShort = "s"
+	flagServerVirtualIPUsage = "The virtual IP of this sidecar"
+
+	flagClientCIDRs      = "client-virtual-cidrs"
+	flagClientCIDRsShort = "c"
+	flagClientCIDRsUsage = "The CIDRs of clients' virtual IP addresses"
+
+	flagEnablePProf      = "enable-pprof"
+	flagEnablePProfUsage = "Enable performance profiling at :8080/debug/pprof"
 )
 
 const (
 	envStrPort     = "PORT"
 	envStrLogLevel = "LOG_LEVEL"
+	// TODO
 )
 
-const (
-	defaultPort     = 32000
-	defaultLogLevel = "info"
+var (
+	defaultPort            = 32000
+	defaultLogLevel        = "info"
+	defaultServerVirtualIP = ""
+	defaultClientCIDRs     = []string{}
+	defaultEnablePProf     = false
 )
 
 const (
@@ -63,6 +78,9 @@ func NewVersionCommand() *cobra.Command {
 }
 
 func addFlags(f *pflag.FlagSet) {
-	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
 	f.IntP(flagPort, flagPortShort, defaultPort, flagPortUsage)
+	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
+	f.StringP(flagServerVirtualIP, flagServerVirtualIPShort, defaultServerVirtualIP, flagClientCIDRsUsage)
+	f.StringArrayP(flagClientCIDRs, flagClientCIDRsShort, defaultClientCIDRs, flagClientCIDRsUsage)
+	f.Bool(flagEnablePProf, defaultEnablePProf, flagEnablePProfUsage)
 }

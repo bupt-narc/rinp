@@ -7,6 +7,7 @@ import (
 )
 
 func main() {
+
 	if err := sidecar.NewCommand().Execute(); err != nil {
 		os.Exit(1)
 	}

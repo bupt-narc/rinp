@@ -16,10 +16,10 @@ type ClientConn struct {
 func NewClientConn(
 	name string,
 	clientIP net.IP,
-	serverRoutes []string,
+	serverRoutes []*net.IPNet,
 	serverAddr string,
 ) (*ClientConn, error) {
-	overlayRoutes, err := stringToRoutes(serverRoutes, clientIP)
+	overlayRoutes, err := ipNetToRoutes(serverRoutes, clientIP)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot parse routes")
 	}
