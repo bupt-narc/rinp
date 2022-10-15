@@ -1,9 +1,23 @@
-# MTDA: Moving Target Defense Agent
+# RINP: RINP Is Not a Proxy
 
-[中文文档](README.zh-CN.md)
+## 原则
 
-```shell
-docker run -d --name nginx --privileged --expose 32000/udp nginx
-docker cp bin/linux_amd64/sidecar nginx:/
-docker exec -it nginx /bin/bash
-```
+- 切换代理期间服务不中断（无感知）
+- 不要改变原有业务代码（只能新增）
+- 不要引入新的安全问题
+
+## 待办清单
+
+- [x] 实现 client 与 sidecar 的封包后的报文抓取（采用UDP作为L2）
+- [x] tun 实现 user 与 service 基于封包的正常通信
+- [x] 多用户支持
+- [ ] 经由proxy实现 user 与 service 基于封包的正常通信
+- [ ] proxy 定期切换，用户服务无感知，防御住僵尸流量
+- [ ] 引入洗牌算法+评分机制，筛选出间谍用户 （采用现成算法    TODO 用自研算法再发一篇论文）
+- [ ] 包传送过程中仿照JWT进行加密、解密：签名算法、数据、签名算法
+
+## 论文列表
+
+网络区：移动目标防御的一种工程实现（JWT算法看情况是否单独分离）
+网络区（马腾超）：筛选间谍用户的算法更新
+软工区：实现机制性能损耗分析
