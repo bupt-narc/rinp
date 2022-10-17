@@ -55,7 +55,7 @@ all-package: $(addprefix package-, $(subst /,_, $(BIN_PLATFORMS)))
 	cd "$(BIN_VERBOSE_DIR)" && sha256sum *{.tar.gz,.zip} > "$(BIN)-$(VERSION)-checksums.txt"
 
 build: # @HELP build binary locally
-build:
+build: gen-dockerignore
 	ARCH=$(ARCH)                     \
 	    OS=$(OS)                     \
 	    OUTPUT=$(OUTPUT)             \
@@ -115,6 +115,9 @@ docker-push-%:
 
 docker-push: # @HELP push images
 docker-push: $(addprefix docker-push-, $(subst :,=, $(subst /,_, $(IMGTAGS))))
+
+gen-dockerignore:
+	echo -e "*\n!$(BIN_VERBOSE_DIR)" > .dockerignore
 
 version: # @HELP output the version string
 version:
