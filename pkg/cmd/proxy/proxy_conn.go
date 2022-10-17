@@ -68,7 +68,7 @@ func (c *ProxyConn) deal() {
 		connLog.Tracef("received packet: %x", packetData)
 		c.rxBytes += uint64(n)
 
-		pkt, err := packet.NewFromLayer4Bytes(packetData)
+		pkt, err := packet.NewFromLayer3Bytes(packetData)
 		if err != nil {
 			connLog.Errorf("error when parsing packet: %s", err)
 			continue
