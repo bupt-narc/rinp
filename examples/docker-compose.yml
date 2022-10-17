@@ -1,0 +1,84 @@
+version: "3.9"
+services:
+  user:
+    image: rinp
+    command:
+      [
+        "./client",
+        "-c",
+        "10.20.30.40",
+        "-p",
+        "172.127.1.111:5114",
+        "-s",
+        "11.22.33.44/32",
+        "--log-level",
+        "debug"
+      ]
+    container_name: user
+    privileged: true
+    networks:
+      rinp-public:
+        ipv4_address: 172.127.1.10
+
+  proxy1:
+    image: rinp
+    container_name: proxy1
+    command: [ "./proxy", "--log-level", "debug" ]
+    privileged: true
+    networks:
+      rinp-public:
+        ipv4_address: 172.127.1.111
+      rinp-private:
+        ipv4_address: 172.127.2.111
+  proxy2:
+    image: rinp
+    container_name: proxy2
+    command: [ "./proxy", "--log-level", "debug" ]
+    privileged: true
+    networks:
+      rinp-public:
+        ipv4_address: 172.127.1.2
+      rinp-private:
+        ipv4_address: 172.127.2.2
+  proxy3:
+    image: rinp
+    container_name: proxy3
+    command: [ "./proxy", "--log-level", "debug" ]
+    privileged: true
+    networks:
+      rinp-public:
+        ipv4_address: 172.127.1.3
+      rinp-private:
+        ipv4_address: 172.127.2.3
+
+  service:
+    image: rinp
+    container_name: service
+    command:
+      [
+        "./sidecar",
+        "-c",
+        "10.20.30.40/32",
+        "-p",
+        "12345",
+        "-s",
+        "11.22.33.44",
+        "--log-level",
+        "debug"
+      ]
+    privileged: true
+    networks:
+      rinp-private:
+        ipv4_address: 172.127.2.10
+
+networks:
+  rinp-public:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.127.1.0/24
+  rinp-private:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.127.2.0/24

@@ -11,7 +11,7 @@ import (
 
 const (
 	defaultServiceCIDR    = "11.22.33.44/24"
-	defaultServiceAddress = "172.18.0.2:32000"
+	defaultServiceAddress = "172.127.2.10:12345"
 )
 
 type ProxyConn struct {
@@ -79,10 +79,10 @@ func (c *ProxyConn) deal() {
 		// TODO get client NextHop from etcd
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			_, err := c.NextHop.GetNextHopByString(pkt.GetSrc().String())
-			if err != nil {
-				connLog.Debugf("updating old connection to %s", pkt.GetSrc().String())
+			if err == nil {
+				connLog.Debugf("updating old connection to %s: %s", pkt.GetSrc().String(), udpAddr.String())
 			} else {
-				connLog.Debugf("adding new connection to %s", pkt.GetSrc().String())
+				connLog.Debugf("adding new connection to %s: %s", pkt.GetSrc().String(), udpAddr.String())
 			}
 		}
 		c.NextHop.SetNextHopByString(pkt.GetSrc().String(), udpAddr.String())

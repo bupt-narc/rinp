@@ -11,3 +11,4 @@ RUN apt-get install -y \
     iputils-ping \
     bash \
     iperf3 \
+    curl

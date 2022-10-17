@@ -3,6 +3,7 @@ package overlay
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/bupt-narc/rinp/pkg/packet"
 	"github.com/pkg/errors"
@@ -68,19 +69,42 @@ func NewClientConn(
 
 	connLog.Infof("client connection activated, clientAddr=%s, serverRoutes=%v", clientIP, serverRoutes)
 
+	addresses := []string{
+		"172.127.1.111",
+		"172.127.1.2",
+		"172.127.1.3",
+	}
+	index := 0
+	go func() {
+		for {
+			if conn.quit {
+				break
+			}
+			time.Sleep(5000 * time.Millisecond)
+			conn.SetServerAddr(addresses[index] + ":5114")
+			index = (index + 1) % 3
+		}
+	}()
 	return conn, nil
 }
 
 func (c *ClientConn) SetServerAddr(addr string) error {
 	s, err := net.ResolveUDPAddr("udp4", addr)
 	if err != nil {
+		connLog.Errorf("cannot resolve server address: %s", err)
 		return err
 	}
 	conn, err := net.DialUDP("udp4", nil, s)
 	if err != nil {
+		connLog.Errorf("cannot dial server: %s", err)
 		return err
 	}
+	oldConn := c.udpConn
 	c.udpConn = conn
+	if oldConn != nil {
+		oldConn.Close()
+	}
+	connLog.Infof("set server address to: %s", addr)
 	return nil
 }
 
