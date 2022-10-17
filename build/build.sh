@@ -51,9 +51,9 @@ LDFLAGS_EXTRA="${LDFLAGS_EXTRA:-}"
 if [ -z "${DBG_BUILD:-}" ]; then
   # If user don't want debug build, remove all unnecessary info from binary.
   LDFLAGS_EXTRA="${LDFLAGS_EXTRA:-} -s -w"
-  echo "# Release Building..."
+  echo "# Building for release..."
 else
-  echo "# Debug building..."
+  echo "# Building for debug..."
 fi
 
 # Set some version info.

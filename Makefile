@@ -1,9 +1,6 @@
 MAKEFLAGS += --no-print-directory
 MAKEFLAGS += --always-make
 
-# Use bash explicitly
-SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
-
 BIN = $(wildcard *.mk)
 
 all: $(addprefix mk-all_,$(BIN))
