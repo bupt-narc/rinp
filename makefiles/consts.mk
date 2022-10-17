@@ -48,10 +48,14 @@ ifeq ($(OS), windows)
     BIN_EXTENSION := .exe
 endif
 
+# Include debug info in binary
 DBG_BUILD   ?=
+# Use full binary name with os arch in it
 FULL_NAME   ?=
 GOFLAGS     ?=
 GOPROXY     ?=
+# The base image of Dockerfile
+BASE_IMAGE  ?=
 
 # Registry to push to
 REGISTRY := rinp # ghcr.io/bupt-narc

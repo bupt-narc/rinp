@@ -89,10 +89,11 @@ all-docker-build-push: $(addprefix build-, $(subst /,_, $(IMG_PLATFORMS)))
 	echo -e "# target: $(OS)/$(ARCH)\tversion: $(VERSION)\ttags: $(IMGTAGS)"
 	TMPFILE=Dockerfile && \
 	    sed 's/$${BIN}/$(BIN)/g' Dockerfile.in > $${TMPFILE} && \
-	    docker buildx build --push       \
-	    -f $${TMPFILE}                   \
-	    --platform "$(BUILDX_PLATFORMS)" \
-	    --build-arg "VERSION=$(VERSION)" \
+	    docker buildx build --push             \
+	    -f $${TMPFILE}                         \
+	    --platform "$(BUILDX_PLATFORMS)"       \
+	    --build-arg "VERSION=$(VERSION)"       \
+	    --build-arg "BASE_IMAGE=$(BASE_IMAGE)" \
 	    $(addprefix -t ,$(IMGTAGS)) .
 
 
@@ -101,12 +102,13 @@ docker-build: build-$(OS)_$(ARCH)
 	echo -e "# target: $(OS)/$(ARCH)\tversion: $(VERSION)\ttags: $(IMGTAGS)"
 	TMPFILE=Dockerfile && \
 	    sed 's/$${BIN}/$(BIN)/g' Dockerfile.in > $${TMPFILE} && \
-	    DOCKER_BUILDKIT=1                \
-	    docker build                     \
-	    -f $${TMPFILE}                   \
-	    --build-arg "ARCH=$(ARCH)"       \
-	    --build-arg "OS=$(OS)"           \
-	    --build-arg "VERSION=$(VERSION)" \
+	    DOCKER_BUILDKIT=1                      \
+	    docker build                           \
+	    -f $${TMPFILE}                         \
+	    --build-arg "ARCH=$(ARCH)"             \
+	    --build-arg "OS=$(OS)"                 \
+	    --build-arg "VERSION=$(VERSION)"       \
+	    --build-arg "BASE_IMAGE=$(BASE_IMAGE)" \
 	    $(addprefix -t ,$(IMGTAGS)) .
 
 docker-push-%:
