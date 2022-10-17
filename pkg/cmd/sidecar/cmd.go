@@ -80,7 +80,7 @@ func NewVersionCommand() *cobra.Command {
 func addFlags(f *pflag.FlagSet) {
 	f.IntP(flagPort, flagPortShort, defaultPort, flagPortUsage)
 	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
-	f.StringP(flagServerVirtualIP, flagServerVirtualIPShort, defaultServerVirtualIP, flagClientCIDRsUsage)
+	f.StringP(flagServerVirtualIP, flagServerVirtualIPShort, defaultServerVirtualIP, flagServerVirtualIPUsage)
 	f.StringArrayP(flagClientCIDRs, flagClientCIDRsShort, defaultClientCIDRs, flagClientCIDRsUsage)
 	f.Bool(flagEnablePProf, defaultEnablePProf, flagEnablePProfUsage)
 }
