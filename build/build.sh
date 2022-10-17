@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright 2016 The Kubernetes Authors.
+# Copyright 2022 The KubeVela Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,42 +16,50 @@
 
 set -o errexit
 set -o nounset
-set -o pipefail
 
 if [ -z "${OS:-}" ]; then
-    echo "OS must be set"
-    exit 1
+  echo "OS must be set"
+  exit 1
 fi
+
 if [ -z "${ARCH:-}" ]; then
-    echo "ARCH must be set"
-    exit 1
+  echo "ARCH must be set"
+  exit 1
 fi
+
 if [ -z "${VERSION:-}" ]; then
-    echo "VERSION must be set"
-    exit 1
+  echo "VERSION must be set"
+  exit 1
+fi
+
+if [ -z "${OUTPUT:-}" ]; then
+  echo "OUTPUT must be set"
+  exit 1
 fi
 
 export CGO_ENABLED=0
 export GOARCH="${ARCH}"
 export GOOS="${OS}"
 export GO111MODULE=on
+export GOFLAGS="${GOFLAGS:-} -mod=mod "
 
-if [[ "${DEBUG:-}" == 1 ]]; then
-    # Debugging - disable optimizations and inlining
-    gogcflags="all=-N -l"
-    goasmflags=""
-    goldflags=""
+printf "# target: %s/%s\tversion: %s\toutput: %s\n" \
+  "${OS}" "${ARCH}" "${VERSION}" "${OUTPUT}"
+
+LDFLAGS_EXTRA="${LDFLAGS_EXTRA:-}"
+
+if [ -z "${DIRTY_BUILD:-}" ]; then
+  # If user don't want dirty build, remove all unnecessary info from binary.
+  LDFLAGS_EXTRA="${LDFLAGS_EXTRA:-} -s -w"
+  echo "# Building..."
 else
-    # Not debugging - trim paths, disable symbols and DWARF.
-    goasmflags="all=-trimpath=$(pwd)"
-    gogcflags="all=-trimpath=$(pwd)"
-    goldflags="-s -w"
+  echo "# Debug building..."
 fi
 
-always_ldflags="-X $(go list -m)/pkg/version.Version=${VERSION}"
-go install                                                      \
-    -installsuffix "static"                                     \
-    -gcflags="${gogcflags}"                                     \
-    -asmflags="${goasmflags}"                                   \
-    -ldflags="${always_ldflags} ${goldflags}"                   \
-    "$@"
+# Set some version info.
+GO_LDFLAGS="${LDFLAGS_EXTRA} -X $(go list -m)/pkg/version.Version=${VERSION}"
+
+go build                   \
+  -ldflags "${GO_LDFLAGS}" \
+  -o "${OUTPUT}"           \
+  "$@"

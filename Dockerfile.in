@@ -1,4 +1,4 @@
-# Copyright 2016 The Kubernetes Authors.
+# Copyright 2022 The KubeVela Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,28 +12,55 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM {ARG_FROM}
+# Note: the ${BIN} needs to be replaced with the actual binary,
+# otherwise it won't work. A valid Dockerfile will be generated
+# using this template. Refer to Makefile for how it can be done.
 
-# When building, we can pass a unique value (e.g. `date +%s`) for this arg,
-# which will force a rebuild from here (by invalidating docker's cache).
-ARG FORCE_REBUILD=0
+# syntax = docker/dockerfile:1.2
+# You need to enable Docker BuildKit for this to work.
+# Also refer to Makefile for how it can be done.
 
-# When building, we can pass a hash of the licenses tree, which docker checks
-# against its cache and can force a rebuild from here.
-ARG HASH_LICENSES=0
+ARG BUILD_IMAGE=golang:1.18-alpine
+ARG BASE_IMAGE=gcr.io/distroless/static:nonroot
 
-# Add third-party licenses.
-COPY .licenses/ /LICENSES/
+# Force native build platform, and cross-build to target platform later.
+FROM --platform=${BUILDPLATFORM:-linux/amd64} ${BUILD_IMAGE} as builder
 
-# When building, we can pass a hash of the binary, which docker checks against
-# its cache and can force a rebuild from here.
-ARG HASH_BINARY=0
+WORKDIR /workspace
+COPY go.mod go.mod
+COPY go.sum go.sum
 
-# Add the platform-specific binary.
-COPY bin/{ARG_OS}_{ARG_ARCH}/{ARG_BIN} /{ARG_BIN}
+ARG GOPROXY
+ENV GOPROXY=${GOPROXY}
+RUN --mount=type=cache,target=/root/go/pkg \
+        go mod download
 
-# This would be nicer as `nobody:nobody` but distroless has no such entries.
-USER 65535:65535
-ENV HOME /
+COPY build       build
+COPY cmd         cmd
+#COPY api         api
+#COPY controllers controllers
+COPY pkg         pkg
 
-ENTRYPOINT ["/{ARG_BIN}"]
+ARG TARGETARCH
+ARG ARCH
+ARG TARGETOS
+ARG OS
+ARG VERSION
+ARG GOFLAGS
+ARG DIRTY_BUILD
+ARG ENTRY
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+        ARCH=${TARGETARCH:-${ARCH:-amd64}}          \
+        OS=${TARGETOS:-${OS:-linux}}                \
+        OUTPUT=${BIN}                               \
+        VERSION=${VERSION}                          \
+        GOFLAGS=${GOFLAGS}                          \
+        DIRTY_BUILD=${DIRTY_BUILD}                  \
+        /bin/sh build/build.sh                      \
+        ${ENTRY}
+
+FROM ${BASE_IMAGE}
+WORKDIR /
+COPY --from=builder /workspace/${BIN} .
+ENTRYPOINT ["/${BIN}"]
