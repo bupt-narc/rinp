@@ -48,10 +48,10 @@ ifeq ($(OS), windows)
     BIN_EXTENSION := .exe
 endif
 
-DIRTY_BUILD ?=
+DBG_BUILD   ?=
 FULL_NAME   ?=
 GOFLAGS     ?=
 GOPROXY     ?=
 
 # Registry to push to
-REGISTRY := ghcr.io/bupt-narc
+REGISTRY := rinp # ghcr.io/bupt-narc

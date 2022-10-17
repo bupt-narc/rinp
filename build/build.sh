@@ -48,10 +48,10 @@ printf "# target: %s/%s\tversion: %s\toutput: %s\n" \
 
 LDFLAGS_EXTRA="${LDFLAGS_EXTRA:-}"
 
-if [ -z "${DIRTY_BUILD:-}" ]; then
-  # If user don't want dirty build, remove all unnecessary info from binary.
+if [ -z "${DBG_BUILD:-}" ]; then
+  # If user don't want debug build, remove all unnecessary info from binary.
   LDFLAGS_EXTRA="${LDFLAGS_EXTRA:-} -s -w"
-  echo "# Building..."
+  echo "# Release Building..."
 else
   echo "# Debug building..."
 fi

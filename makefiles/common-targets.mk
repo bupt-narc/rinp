@@ -33,14 +33,25 @@ all: build
 
 build-%:
 	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) \
+	    build                                \
+	    --no-print-directory                 \
+	    GOOS=$(firstword $(subst _, ,$*))    \
+	    GOARCH=$(lastword $(subst _, ,$*))   \
+	    FULL_NAME=1
+
+package-%:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) \
 	    package                              \
 	    --no-print-directory                 \
 	    GOOS=$(firstword $(subst _, ,$*))    \
 	    GOARCH=$(lastword $(subst _, ,$*))   \
 	    FULL_NAME=1
 
-all-build: # @HELP build and package binaries for all platforms
+all-build: # @HELP build binaries for all platforms
 all-build: $(addprefix build-, $(subst /,_, $(BIN_PLATFORMS)))
+
+all-package: # @HELP build and package binaries for all platforms
+all-package: $(addprefix package-, $(subst /,_, $(BIN_PLATFORMS)))
 	cd "$(BIN_VERBOSE_DIR)" && sha256sum *{.tar.gz,.zip} > "$(BIN)-$(VERSION)-checksums.txt"
 
 build: # @HELP build binary locally
@@ -50,7 +61,7 @@ build:
 	    OUTPUT=$(OUTPUT)             \
 	    VERSION=$(VERSION)           \
 	    GOFLAGS=$(GOFLAGS)           \
-	    DIRTY_BUILD=$(DIRTY_BUILD)   \
+	    DBG_BUILD=$(DBG_BUILD)       \
 	    bash build/build.sh $(ENTRY)
 
 package: build
@@ -73,7 +84,7 @@ docker-build-%:
 BUILDX_PLATFORMS := $(shell echo "$(IMG_PLATFORMS)" | sed -r 's/ /,/g')
 
 all-docker-build-push: # @HELP build and push images for all platforms
-all-docker-build-push:
+all-docker-build-push: $(addprefix build-, $(subst /,_, $(IMG_PLATFORMS)))
 	echo -e "# Building and pushing images for platforms $(IMG_PLATFORMS)"
 	echo -e "# target: $(OS)/$(ARCH)\tversion: $(VERSION)\ttags: $(IMGTAGS)"
 	TMPFILE=Dockerfile && \
@@ -82,27 +93,20 @@ all-docker-build-push:
 	    -f $${TMPFILE}                   \
 	    --platform "$(BUILDX_PLATFORMS)" \
 	    --build-arg "VERSION=$(VERSION)" \
-	    --build-arg "GOFLAGS=$(GOFLAGS)" \
-	    --build-arg "GOPROXY=$(GOPROXY)" \
-	    --build-arg "ENTRY=$(ENTRY)"     \
 	    $(addprefix -t ,$(IMGTAGS)) .
 
 
 docker-build: # @HELP build docker image
-docker-build:
+docker-build: build-$(OS)_$(ARCH)
 	echo -e "# target: $(OS)/$(ARCH)\tversion: $(VERSION)\ttags: $(IMGTAGS)"
 	TMPFILE=Dockerfile && \
 	    sed 's/$${BIN}/$(BIN)/g' Dockerfile.in > $${TMPFILE} && \
-	    DOCKER_BUILDKIT=1                        \
-	    docker build                             \
-	    -f $${TMPFILE}                           \
-	    --build-arg "ARCH=$(ARCH)"               \
-	    --build-arg "OS=$(OS)"                   \
-	    --build-arg "VERSION=$(VERSION)"         \
-	    --build-arg "GOFLAGS=$(GOFLAGS)"         \
-	    --build-arg "GOPROXY=$(GOPROXY)"         \
-	    --build-arg "ENTRY=$(ENTRY)"             \
-	    --build-arg "DIRTY_BUILD=$(DIRTY_BUILD)" \
+	    DOCKER_BUILDKIT=1                \
+	    docker build                     \
+	    -f $${TMPFILE}                   \
+	    --build-arg "ARCH=$(ARCH)"       \
+	    --build-arg "OS=$(OS)"           \
+	    --build-arg "VERSION=$(VERSION)" \
 	    $(addprefix -t ,$(IMGTAGS)) .
 
 docker-push-%:

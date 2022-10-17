@@ -12,6 +12,8 @@ build: $(addprefix mk-build_,$(BIN))
 
 all-build: $(addprefix mk-all-build_,$(BIN))
 
+all-package: $(addprefix mk-all-package_,$(BIN))
+
 all-docker-build-push: $(addprefix mk-all-docker-build-push_,$(BIN))
 
 docker-build: $(addprefix mk-docker-build_,$(BIN))
