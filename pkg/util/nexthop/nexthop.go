@@ -6,7 +6,7 @@ import (
 )
 
 // NextHopMap is a map of CIDR to next hop IP address.
-type NextHopMap map[*net.IPNet]*net.UDPAddr
+type NextHopMap map[*net.IPNet]*net.UDPAddr // FIXME: do not use pointers
 
 // SetNextHop adds a CIDR to next hop IP address mapping.
 func (m NextHopMap) SetNextHop(cidr *net.IPNet, nextHop string) error {

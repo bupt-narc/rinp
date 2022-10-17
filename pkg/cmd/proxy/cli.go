@@ -32,7 +32,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 		FullTimestamp:   true,
 	})
 
-	logrus.Info("rinp-proxy version %s", version.Version)
+	logrus.Infof("rinp-proxy version %s", version.Version)
 
 	// Performance profiling
 	if opt.EnablePProf {

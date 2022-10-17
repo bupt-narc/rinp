@@ -33,7 +33,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 		FullTimestamp:   true,
 	})
 
-	logrus.Info("rinp-sidecar version %s", version.Version)
+	logrus.Infof("rinp-sidecar version %s", version.Version)
 
 	// Performance profiling
 	if opt.EnablePProf {
