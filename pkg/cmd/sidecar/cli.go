@@ -42,7 +42,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 	}
 
 	conn, err := overlay.NewServerConn(
-		"tun0",
+		"tunsidecar0",
 		opt.ServerVirtualIP,
 		opt.Port,
 		opt.ClientCIDRs,
