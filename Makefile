@@ -8,7 +8,7 @@ else
 endif
 
 # The binaries to build
-BINS ?= client sidecar
+BINS ?= client sidecar proxy
 
 # The platforms we support.  In theory this can be used for Windows platforms,
 # too, but they require specific base images, which we do not have.
