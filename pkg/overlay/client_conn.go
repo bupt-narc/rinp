@@ -100,7 +100,7 @@ func (c *ClientConn) readTUNAndWriteUDP() {
 		connLog.Tracef("received packet: %x", packetData)
 
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			pkt, err := packet.NewFromLayer4Bytes(packetData)
+			pkt, err := packet.NewFromLayer3Bytes(packetData)
 			if err != nil {
 				connLog.Errorf("error when parsing packet: %s", err)
 				continue
@@ -134,7 +134,7 @@ func (c *ClientConn) readUDPAndSendTUN() {
 		connLog.Tracef("received packet: %x", packetData)
 
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			pkt, err := packet.NewFromLayer4Bytes(packetData)
+			pkt, err := packet.NewFromLayer3Bytes(packetData)
 			if err != nil {
 				connLog.Errorf("error when parsing packet: %s", err)
 				continue

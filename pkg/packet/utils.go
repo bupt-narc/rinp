@@ -14,20 +14,20 @@ type Packet struct {
 }
 
 var (
-	ErrNotLayer4Packet = errors.New("not a layer 4 packet")
+	ErrNotLayer3Packet = errors.New("not a layer 3 packet")
 )
 
-func NewFromLayer4Bytes(b []byte) (*Packet, error) {
+func NewFromLayer3Bytes(b []byte) (*Packet, error) {
 	pkt := gopacket.NewPacket(b, layers.LayerTypeIPv4, gopacket.Lazy)
 	ipLayer := pkt.Layer(layers.LayerTypeIPv4)
 
 	if ipLayer == nil {
-		return nil, ErrNotLayer4Packet
+		return nil, ErrNotLayer3Packet
 	}
 
 	ip, ok := ipLayer.(*layers.IPv4)
 	if !ok {
-		return nil, ErrNotLayer4Packet
+		return nil, ErrNotLayer3Packet
 	}
 
 	return &Packet{

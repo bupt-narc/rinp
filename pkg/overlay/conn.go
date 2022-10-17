@@ -51,6 +51,7 @@ func (c *Conn) Run(ctx context.Context) {
 	}
 
 	c.quit = true
+	// TODO: make sure it is not nil
 	c.tun.Close()
 	c.udpConn.Close()
 }
