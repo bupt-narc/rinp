@@ -1,10 +1,9 @@
 version: "3.9"
 services:
   user:
-    image: rinp
+    image: rinp/client
     command:
       [
-        "./client",
         "-c",
         "10.20.30.40",
         "-p",
@@ -21,9 +20,9 @@ services:
         ipv4_address: 172.127.1.10
 
   proxy1:
-    image: rinp
+    image: rinp/proxy
     container_name: proxy1
-    command: [ "./proxy", "--log-level", "debug" ]
+    command: [ "--log-level", "debug" ]
     privileged: true
     networks:
       rinp-public:
@@ -31,9 +30,9 @@ services:
       rinp-private:
         ipv4_address: 172.127.2.111
   proxy2:
-    image: rinp
+    image: rinp/proxy
     container_name: proxy2
-    command: [ "./proxy", "--log-level", "debug" ]
+    command: [ "--log-level", "debug" ]
     privileged: true
     networks:
       rinp-public:
@@ -41,9 +40,9 @@ services:
       rinp-private:
         ipv4_address: 172.127.2.2
   proxy3:
-    image: rinp
+    image: rinp/proxy
     container_name: proxy3
-    command: [ "./proxy", "--log-level", "debug" ]
+    command: [ "--log-level", "debug" ]
     privileged: true
     networks:
       rinp-public:
@@ -52,11 +51,10 @@ services:
         ipv4_address: 172.127.2.3
 
   service:
-    image: rinp
+    image: rinp/sidecar
     container_name: service
     command:
       [
-        "./sidecar",
         "-c",
         "10.20.30.40/32",
         "-p",
