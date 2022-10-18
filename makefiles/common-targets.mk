@@ -64,6 +64,7 @@ build: gen-dockerignore
 	    DBG_BUILD=$(DBG_BUILD)       \
 	    bash build/build.sh $(ENTRY)
 
+package: # @HELP package binary using gzip or zip
 package: build
 	echo "# Compressing $(BIN_FULLNAME) to $(PKG_FULLNAME)"
 	cp LICENSE "$(BIN_VERBOSE_DIR)/LICENSE"
