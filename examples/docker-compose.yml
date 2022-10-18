@@ -10,8 +10,8 @@ services:
         "172.127.1.111:5114",
         "-s",
         "11.22.33.44/32",
-        "--log-level",
-        "debug"
+        # "--log-level",
+        # "debug"
       ]
     container_name: user
     privileged: true
@@ -22,7 +22,7 @@ services:
   proxy1:
     image: rinp/proxy
     container_name: proxy1
-    command: [ "--log-level", "debug" ]
+    # command: [ "--log-level", "debug" ]
     privileged: true
     networks:
       rinp-public:
@@ -32,7 +32,7 @@ services:
   proxy2:
     image: rinp/proxy
     container_name: proxy2
-    command: [ "--log-level", "debug" ]
+    # command: [ "--log-level", "debug" ]
     privileged: true
     networks:
       rinp-public:
@@ -42,7 +42,7 @@ services:
   proxy3:
     image: rinp/proxy
     container_name: proxy3
-    command: [ "--log-level", "debug" ]
+    # command: [ "--log-level", "debug" ]
     privileged: true
     networks:
       rinp-public:
@@ -61,8 +61,8 @@ services:
         "12345",
         "-s",
         "11.22.33.44",
-        "--log-level",
-        "debug"
+        # "--log-level",
+        # "debug"
       ]
     privileged: true
     networks:

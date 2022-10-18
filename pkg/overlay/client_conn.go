@@ -3,6 +3,7 @@ package overlay
 import (
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/bupt-narc/rinp/pkg/packet"
@@ -69,11 +70,7 @@ func NewClientConn(
 
 	connLog.Infof("client connection activated, clientAddr=%s, serverRoutes=%v", clientIP, serverRoutes)
 
-	addresses := []string{
-		"172.127.1.111",
-		"172.127.1.2",
-		"172.127.1.3",
-	}
+	// TODO
 	index := 0
 	go func() {
 		for {
@@ -81,7 +78,7 @@ func NewClientConn(
 				break
 			}
 			time.Sleep(5000 * time.Millisecond)
-			conn.SetServerAddr(addresses[index] + ":5114")
+			conn.SetServerAddr(fmt.Sprintf("proxy%d:5114", index+1))
 			index = (index + 1) % 3
 		}
 	}()
@@ -116,14 +113,18 @@ func (c *ClientConn) readTUNAndWriteUDP() {
 			if c.quit {
 				break
 			}
+			if strings.Contains(err.Error(), "closed network connection") {
+				continue
+			}
 			connLog.Errorf("cannot receive packet: %s", err)
 			continue
 		}
 		packetData := buf[:n]
-		connLog.Debugf("reveiced %d bytes", n)
-		connLog.Tracef("received packet: %x", packetData)
 
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			connLog.Debugf("reveiced %d bytes", n)
+			connLog.Tracef("received packet: %x", packetData)
+
 			pkt, err := packet.NewFromLayer3Bytes(packetData)
 			if err != nil {
 				connLog.Errorf("error when parsing packet: %s", err)
@@ -135,6 +136,12 @@ func (c *ClientConn) readTUNAndWriteUDP() {
 
 		_, err = c.udpConn.Write(packetData)
 		if err != nil {
+			if c.quit {
+				break
+			}
+			if strings.Contains(err.Error(), "closed network connection") {
+				continue
+			}
 			connLog.Errorf("cannot send packet: %s", err)
 		}
 		c.txBytes += uint64(n)
@@ -149,15 +156,19 @@ func (c *ClientConn) readUDPAndSendTUN() {
 			if c.quit {
 				break
 			}
+			if strings.Contains(err.Error(), "closed network connection") {
+				continue
+			}
 			connLog.Errorf("cannot receive packet: %s", err)
 			continue
 		}
 
 		packetData := buf[:n]
-		connLog.Debugf("reveiced %d bytes", n)
-		connLog.Tracef("received packet: %x", packetData)
 
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			connLog.Debugf("reveiced %d bytes", n)
+			connLog.Tracef("received packet: %x", packetData)
+
 			pkt, err := packet.NewFromLayer3Bytes(packetData)
 			if err != nil {
 				connLog.Errorf("error when parsing packet: %s", err)
@@ -169,6 +180,12 @@ func (c *ClientConn) readUDPAndSendTUN() {
 
 		n, err = c.tun.Write(packetData)
 		if err != nil {
+			if c.quit {
+				break
+			}
+			if strings.Contains(err.Error(), "closed network connection") {
+				continue
+			}
 			connLog.Errorf("cannot send packet: %s", err)
 		}
 		c.rxBytes += uint64(n)

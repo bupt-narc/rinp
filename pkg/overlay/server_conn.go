@@ -113,7 +113,14 @@ func (s *ServerConn) readTUNAndWriteUDP() {
 			continue
 		}
 
-		connLog.Debugf("recv from tun, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			connLog.Debugf("recv from tun, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
+			udpAddr, ok := s.clientPool.Peek(pkt.GetSrc().String())
+			if ok {
+				connLog.Debugf("writing udp to %s", udpAddr.String())
+			}
+		}
+
 		udpAddr, ok := s.clientPool.Get(pkt.GetDst().String())
 		if !ok {
 			connLog.Errorf("cannot find connection to client %s", pkt.GetDst())
@@ -156,8 +163,8 @@ func (s *ServerConn) readUDPAndSendTUN() {
 			continue
 		}
 
-		connLog.Debugf("recv from udp, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			connLog.Debugf("recv from udp, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
 			_, ok := s.clientPool.Peek(pkt.GetSrc().String())
 			if ok {
 				connLog.Debugf("updating old connection to %s", pkt.GetSrc().String())

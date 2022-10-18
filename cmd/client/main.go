@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/bupt-narc/rinp/pkg/cmd/client"
+	"github.com/bupt-narc/rinp/client"
 )
 
 func main() {
