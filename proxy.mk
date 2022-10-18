@@ -15,7 +15,7 @@
 include makefiles/consts.mk
 
 # CLI entry file
-ENTRY        := cmd/proxy/main.go
+ENTRY         := cmd/proxy/main.go
 
 # Binary targets that we support.
 # When doing all-build, these targets will be built.
