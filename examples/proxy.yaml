@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rinp-proxy
+  namespace: rinp-system
+  labels:
+    component: rinp-proxy
+spec:
+  selector:
+    matchLabels:
+      component: rinp-proxy
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: rinp-proxy
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - args:
+            - --log-level=info
+          image: rinp/proxy:latest
+          name: rinp-proxy
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - "ALL"
+#          livenessProbe:
+#            httpGet:
+#              path: /healthz
+#              port: 8081
+#            initialDelaySeconds: 15
+#            periodSeconds: 20
+#          readinessProbe:
+#            httpGet:
+#              path: /readyz
+#              port: 8081
+#            initialDelaySeconds: 5
+#            periodSeconds: 10
+
+#      serviceAccountName: rinp-proxy
+      terminationGracePeriodSeconds: 10
