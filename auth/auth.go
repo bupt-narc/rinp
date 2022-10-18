@@ -78,6 +78,8 @@ func Execute() error {
 			Options:  nil,
 		})
 
+		// TODO: add route for server CIDR, first proxy ip, controller ip
+
 		return app.Dao().SaveCollection(collection)
 	})
 
