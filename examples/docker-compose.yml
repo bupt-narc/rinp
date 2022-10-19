@@ -1,16 +1,14 @@
 version: "3.9"
 services:
   user:
-    image: rinp/client
-    command:
-      [
-        "-c",
-        "7.20.30.40",
-        "-p",
-        "172.127.1.111:5114",
-        "-s",
-        "11.22.33.44/24"
-      ]       
+    image: rinp/client  
+    depends_on:
+      - auth
+      - service
+      - scheduler
+      - proxy1
+      - proxy2
+      - proxy3
     container_name: user
     privileged: true
     networks:
@@ -27,12 +25,13 @@ services:
       - ./pb_data:/pb_data
     networks:
       rinp-public:
-        ipv4_address: 172.127.1.11
+        ipv4_address: 172.127.1.101
+      rinp-private:
+        ipv4_address: 172.127.2.101
 
   proxy1:
     image: rinp/proxy
     container_name: proxy1
-    # command: [ "--log-level", "debug" ]
     networks:
       rinp-public:
         ipv4_address: 172.127.1.111
@@ -41,47 +40,43 @@ services:
   proxy2:
     image: rinp/proxy
     container_name: proxy2
-    # command: [ "--log-level", "debug" ]
     networks:
       rinp-public:
-        ipv4_address: 172.127.1.2
+        ipv4_address: 172.127.1.112
       rinp-private:
-        ipv4_address: 172.127.2.2
+        ipv4_address: 172.127.2.112
   proxy3:
     image: rinp/proxy
     container_name: proxy3
-    # command: [ "--log-level", "debug" ]
     networks:
       rinp-public:
-        ipv4_address: 172.127.1.3
+        ipv4_address: 172.127.1.113
       rinp-private:
-        ipv4_address: 172.127.2.3
+        ipv4_address: 172.127.2.113
 
   service:
     image: rinp/sidecar
     container_name: service
     command:
       [
-        "-c",
-        "7.20.30.40/8",
-        "-p",
-        "12345",
-        "-s",
-        "11.22.33.44"
+        "-c=7.0.0.0/8",
+        "-p=12345",
+        "-s=11.22.33.44",
       ]       
     privileged: true
     networks:
       rinp-private:
-        ipv4_address: 172.127.2.10
+        ipv4_address: 172.127.2.201
 
   scheduler:
+    # Virtual IP 11.22.33.55 
     image: rinp/scheduler
     container_name: scheduler
     command: [ "--log-level=debug" ]
     privileged: true
     networks:
       rinp-private:
-        ipv4_address: 172.127.2.101
+        ipv4_address: 172.127.2.202
 
 networks:
   rinp-public:
