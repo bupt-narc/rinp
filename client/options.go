@@ -62,6 +62,16 @@ func (o *Option) WithCliFlags(flags *pflag.FlagSet) *Option {
 	return o
 }
 
+func (o *Option) WithNetwork() *Option {
+	// TODO input email and password
+	err := setInfoByDefault(o)
+	if err != nil {
+		logrus.Errorln(err)
+		return o
+	}
+	return o
+}
+
 func (o *Option) Validate() (*Option, error) {
 	_, err := logrus.ParseLevel(o.LogLevel)
 	if err != nil {

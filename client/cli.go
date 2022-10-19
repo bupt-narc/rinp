@@ -18,6 +18,7 @@ import (
 func runCli(cmd *cobra.Command, args []string) error {
 	opt, err := NewOption().
 		WithDefaults().
+		WithNetwork().
 		WithEnvVariables().
 		WithCliFlags(cmd.Flags()).
 		Validate()
