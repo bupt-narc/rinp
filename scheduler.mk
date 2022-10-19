@@ -23,7 +23,7 @@ BIN_PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 IMG_PLATFORMS := linux/amd64 linux/arm64
 
 # Binary basename, without extension
-BIN           := sheduler
+BIN           := scheduler
 
 # Docker image tag
 IMGTAGS  ?= $(addsuffix /$(BIN):$(IMG_VERSION),$(REGISTRY))

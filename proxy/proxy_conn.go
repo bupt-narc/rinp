@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	defaultServiceCIDR    = "11.22.33.44/24"
-	defaultServiceAddress = "172.127.2.10:12345"
+	defaultServiceCIDR      = "11.22.33.44/32"
+	defaultServiceAddress   = "service:12345"
+	defaultSchedulerCIDR    = "11.22.33.55/32"
+	defaultSchedulerAddress = "scheduler:12345"
 )
 
 type ProxyConn struct {
@@ -27,9 +29,12 @@ func NewProxyConn(
 			listenPort: listenPort,
 		},
 	}
+
 	// TODO get NextHop from etcd
 	_, ServiceCIDR, _ := net.ParseCIDR(defaultServiceCIDR)
 	conn.NextHop.SetNextHop(ServiceCIDR, defaultServiceAddress)
+	_, SchedulerCIDR, _ := net.ParseCIDR(defaultSchedulerCIDR)
+	conn.NextHop.SetNextHop(SchedulerCIDR, defaultSchedulerAddress)
 
 	conn.SetDealFunc(conn.deal)
 

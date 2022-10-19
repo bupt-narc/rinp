@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	baseURL         string = "http://127.0.0.1:8090" // TODO input by user
+	baseURL         string = "http://auth:8090" // TODO input by user
 	defaultEmail    string = "example@example.com"
 	defaultPassword string = "example@example.com"
 )
@@ -28,9 +28,13 @@ func login(email, password string) error {
 		return err
 	}
 	defer response.Body.Close()
+	// FIXME
+	if response.StatusCode != 200 {
+		return fmt.Errorf("login failed")
+	}
 	type LoginResponse struct {
-		Token string         `json:"token"`
-		User  map[string]any `json:"user"`
+		Token string                 `json:"token"`
+		User  map[string]interface{} `json:"user"`
 	}
 	var loginResponse LoginResponse
 	err = json.NewDecoder(response.Body).Decode(&loginResponse)
@@ -38,7 +42,7 @@ func login(email, password string) error {
 		return err
 	}
 	token = "User " + loginResponse.Token
-	vip = loginResponse.User["profile"].(map[string]any)["vip"].(string)
+	vip = loginResponse.User["profile"].(map[string]interface{})["vip"].(string)
 	return nil
 }
 

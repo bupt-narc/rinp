@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/bupt-narc/rinp/pkg/packet"
 	"github.com/pkg/errors"
@@ -55,7 +54,7 @@ func NewClientConn(
 		},
 	}
 
-	err = conn.SetServerAddr(serverAddr)
+	err = conn.SetProxyAddr(serverAddr)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot set server address")
 	}
@@ -70,30 +69,18 @@ func NewClientConn(
 
 	connLog.Infof("client connection activated, clientAddr=%s, serverRoutes=%v", clientIP, serverRoutes)
 
-	// TODO
-	index := 0
-	go func() {
-		for {
-			if conn.quit {
-				break
-			}
-			time.Sleep(5000 * time.Millisecond)
-			conn.SetServerAddr(fmt.Sprintf("proxy%d:5114", index+1))
-			index = (index + 1) % 3
-		}
-	}()
 	return conn, nil
 }
 
-func (c *ClientConn) SetServerAddr(addr string) error {
+func (c *ClientConn) SetProxyAddr(addr string) error {
 	s, err := net.ResolveUDPAddr("udp4", addr)
 	if err != nil {
-		connLog.Errorf("cannot resolve server address: %s", err)
+		connLog.Errorf("cannot resolve proxy address: %s", err)
 		return err
 	}
 	conn, err := net.DialUDP("udp4", nil, s)
 	if err != nil {
-		connLog.Errorf("cannot dial server: %s", err)
+		connLog.Errorf("cannot dial proxy: %s", err)
 		return err
 	}
 	oldConn := c.udpConn
@@ -101,7 +88,7 @@ func (c *ClientConn) SetServerAddr(addr string) error {
 	if oldConn != nil {
 		oldConn.Close()
 	}
-	connLog.Infof("set server address to: %s", addr)
+	connLog.Infof("set proxy address to: %s", addr)
 	return nil
 }
 

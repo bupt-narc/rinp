@@ -36,7 +36,7 @@ func init() {
 		panic(err)
 	}
 	ServerCIDR = []string{"11.22.33.44/24"}
-	FirstProxyAddress = "172.127.1.111:5114"
+	FirstProxyAddress = "proxy1:5114"
 	SchedulerAddress = "11.22.33.55:5525"
 }
 

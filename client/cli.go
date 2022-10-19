@@ -1,7 +1,9 @@
 package client
 
 import (
+	"bufio"
 	"context"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -63,8 +65,50 @@ func runCli(cmd *cobra.Command, args []string) error {
 		<-sigterm
 		cancel()
 	}()
-
+	go switchProxyAddress(ctx, conn, "11.22.33.55:5525") // TODO add scheduler address to option
 	conn.Run(ctx)
 
 	return nil
+}
+
+// recieve command packet from scheduler to change proxy address
+func switchProxyAddress(ctx context.Context, clientConn *overlay.ClientConn, schedulerAddress string) {
+	ch := make(chan struct{})
+	go func() {
+		// construct a tcp connection to scheduler
+		conn, err := net.Dial("tcp", schedulerAddress)
+		if err != nil {
+			logrus.Errorf("cannot connect to scheduler: %v", err)
+			close(ch)
+			return
+		}
+		defer conn.Close()
+
+		for {
+			// read command packet from scheduler
+			message, err := bufio.NewReader(conn).ReadString('\n')
+			if err != nil {
+				logrus.Errorf("cannot read command packet: %v", err)
+				break
+			}
+			addr := message[:len(message)-1]
+
+			// change proxy address
+			err = clientConn.SetProxyAddr(addr)
+			if err != nil {
+				logrus.Errorf("cannot change proxy address: %v", err)
+				break
+			}
+
+			// TODO how does this ack packet work for the system?
+			conn.Write([]byte(addr + "\n"))
+		}
+		close(ch)
+	}()
+
+	select {
+	case <-ch:
+		logrus.Infof("stopped reading")
+	case <-ctx.Done():
+	}
 }

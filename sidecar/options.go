@@ -72,6 +72,7 @@ func (o *Option) Validate() (*Option, error) {
 	if err != nil {
 		return nil, err
 	}
+	// FIXME
 	if o.Port <= 0 {
 		return nil, fmt.Errorf("%s must be greater than 0", flagPort)
 	}
