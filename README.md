@@ -29,3 +29,31 @@
 - [ ] **网络区**: 利用 JWT 直接实现间谍用户筛选的一种移动目标防御实现
 - [ ] **软工区**: 实现机制性能损耗分析
 - [ ] **软工区**: 结伴编程
+
+## Redis Reference
+
+### DB0
+
+Stores information about clients:
+
+- Virtual IP (key)
+- Valid Proxy (Note: when implementing proxy, we should take network latency into consideration, i.e. from the schedulers' message to proxy)
+
+Note: 
+
+- Auth module will be setting expiration time according to the expiration time of the JWT token when clients logging in. When the client renews its token, the expiry time should be updated.
+- Proxies will be watching this, so they know which clients are valid. Also, proxies should use client side caching to reduce the number of requests to Redis when inspecting packets.
+- Scheduler will update the proxy information when it reschedules clients.
+
+### DB1
+
+Stores information about proxies:
+
+- Proxy name (key)
+- Public IP address
+
+Note: 
+
+- Proxies should update their key every 1s when they are alive. keys should have a TTL of 2s, so that we can remove the proxy when it is down. 
+- Scheduler will be watching this, so it knows which proxy is alive and assign clients to them.
+- Auth module will also use this information to choose the first proxy.
