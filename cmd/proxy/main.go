@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/bupt-narc/rinp/proxy"
+	"github.com/bupt-narc/rinp/components/proxy"
 )
 
 func main() {

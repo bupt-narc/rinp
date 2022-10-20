@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bupt-narc/rinp/auth"
+	"github.com/bupt-narc/rinp/components/auth"
 )
 
 func main() {

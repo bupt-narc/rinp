@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/bupt-narc/rinp/sidecar"
+	"github.com/bupt-narc/rinp/components/sidecar"
 )
 
 func main() {
