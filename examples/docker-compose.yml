@@ -36,10 +36,13 @@ services:
     container_name: proxy1
     depends_on:
       - redis
+    expose:
+      - 8080
     command:
       - "--redis=redis:6379"
       - "--name=proxy1"
       - "--public-ip=proxy1"
+      - "--enable-pprof"
 #      - "--log-level=debug"
     networks:
       rinp-public:

@@ -100,6 +100,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 func selfHeartbeat(name, ip string, port int) {
 	do := func(ctx context.Context) {
 		err := redisProxy.Do(ctx, redisProxy.B().Set().Key(name).Value(fmt.Sprintf("%s:%d", ip, port)).ExSeconds(2).Build()).Error()
+		defer time.Sleep(1 * time.Second)
 		if err != nil {
 			logrus.Errorf("redis cannot set %s:%s", name, ip)
 			return
@@ -107,11 +108,8 @@ func selfHeartbeat(name, ip string, port int) {
 	}
 
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-
-		defer cancel()
-		defer time.Sleep(1 * time.Second)
-
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		do(ctx)
+		cancel()
 	}
 }
