@@ -105,7 +105,7 @@ func (c *ProxyConn) deal() {
 
 		// Get nextHop (client or sidecar)
 		nextHop := findNextHop(pkt.GetDst().String(), c.NextHop)
-		if nextHop == "" {
+		if nextHop == nil {
 			connLog.Errorf("cannot get nexthop")
 			continue
 		}
@@ -114,20 +114,14 @@ func (c *ProxyConn) deal() {
 		// connection to sidecar will not be used later.
 		c.NextHop.SetNextHopByString(pkt.GetSrc().String(), udpAddr.String())
 
-		nextUDPAddr, err := net.ResolveUDPAddr("udp4", nextHop)
+		n, err = conn.WriteToUDP(packetData, nextHop)
 		if err != nil {
-			connLog.Errorf("cannot resolve udp addr: %s", err)
-			continue
-		}
-
-		n, err = conn.WriteToUDP(packetData, nextUDPAddr)
-		if err != nil {
-			connLog.Errorf("cannot send packet to %s: %s", nextUDPAddr.String(), err)
+			connLog.Errorf("cannot send packet to %s: %s", nextHop.String(), err)
 			continue
 		}
 
 		c.txBytes += uint64(n)
-		connLog.Debugf("send %d bytes to %s", n, nextUDPAddr.String())
+		connLog.Debugf("send %d bytes to %s", n, nextHop.String())
 	}
 }
 
@@ -185,7 +179,22 @@ func isServiceAddr(addr string) bool {
 }
 
 // TODO: use local cache; refactor;
-func findNextHop(addr string, clientMap nexthop.NextHopMap) string {
+func findNextHop(addr string, clientMap nexthop.NextHopMap) *net.UDPAddr {
+	isClientRoute := false
+	udpAddr, err := clientMap.GetNextHopByString(addr)
+	var clientAddr *net.UDPAddr
+	if err == nil {
+		clientAddr = udpAddr
+		isClientRoute = true
+	}
+
+	connLog.Debugf("find nexthop vip=%s, msg=%s", addr, udpAddr.String())
+
+	if isClientRoute {
+		connLog.Debugf("returning client addr")
+		return clientAddr
+	}
+
 	isServerRoute := false
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -193,46 +202,38 @@ func findNextHop(addr string, clientMap nexthop.NextHopMap) string {
 	sidecarMsg := redisSidecar.DoCache(ctx, redisSidecar.B().Get().Key(addr).Cache(), 30*time.Second)
 	if sidecarMsg.NonRedisError() != nil {
 		connLog.Errorf("error when getting sidecar address from redis: %s", sidecarMsg.NonRedisError())
-		return ""
+		return nil
 	}
 
 	connLog.Debugf("find sidecar vip=%s, msg=%s", addr, sidecarMsg)
 
-	_, err := sidecarMsg.ToMessage()
+	_, err = sidecarMsg.ToMessage()
 
 	if err == nil {
 		// Got a sidecar addr
 		isServerRoute = true
 	}
 
-	isClientRoute := false
-	udpAddr, err := clientMap.GetNextHopByString(addr)
-	var clientAddr string
-	if err == nil {
-		clientAddr = udpAddr.String()
-		isClientRoute = true
-	}
-
-	connLog.Debugf("find nexthop vip=%s, msg=%s", addr, udpAddr.String())
-
 	if !isClientRoute && !isServerRoute {
-		return ""
+		return nil
 	}
 
-	// Nexthop from Redis have higher priority.
+	// FIXME: use newer information from Redis to update local cache
+	// Currently, local cache have higher priority, so we will miss Redis updates.
+
 	if isServerRoute {
 		addr, err := sidecarMsg.ToString()
 		if err != nil {
-			return ""
+			return nil
 		}
 		connLog.Debugf("returning sidecar addr")
-		return addr
+		nextUDPAddr, err := net.ResolveUDPAddr("udp4", addr)
+		if err != nil {
+			connLog.Errorf("cannot resolve udp addr: %s", err)
+			return nil
+		}
+		return nextUDPAddr
 	}
 
-	if isClientRoute {
-		connLog.Debugf("returning client addr")
-		return clientAddr
-	}
-
-	return ""
+	return nil
 }

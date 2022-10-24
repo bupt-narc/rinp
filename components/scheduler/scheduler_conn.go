@@ -90,7 +90,7 @@ func (c *SchedulerConn) schedule(conn net.Conn) {
 
 		sendNextProxyAddr(conn, proxyIP)
 		index = (index + 1) % int(dbsize)
-		time.Sleep(5000 * time.Millisecond)
+		time.Sleep(20 * time.Second)
 		cancel()
 	}
 
