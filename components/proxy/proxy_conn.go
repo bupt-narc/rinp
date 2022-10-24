@@ -130,8 +130,10 @@ func isClientSchedulerHere(addr string) bool {
 	// Because when cache misses, it will send a request to Redis.
 	// But all malicious packets are cache misses, this will cause a huge pressure on Redis.
 	// Instead, use manual cache that is synced with Redis.
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
+
+	ctx := context.Background()
+	//defer cancel()
+
 	clientMsg := redisClient.DoCache(ctx, redisClient.B().Get().Key(addr).Cache(), 30*time.Second)
 
 	if clientMsg.NonRedisError() != nil {
@@ -157,8 +159,10 @@ func isServiceAddr(addr string) bool {
 	// Because when cache misses, it will send a request to Redis.
 	// But all malicious packets are cache misses, this will cause a huge pressure on Redis.
 	// Instead, use manual cache that is synced with Redis.
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	//defer cancel()
+	ctx := context.Background()
+
 	sidecarMsg := redisSidecar.DoCache(ctx, redisSidecar.B().Get().Key(addr).Cache(), 30*time.Second)
 
 	if sidecarMsg.NonRedisError() != nil {
