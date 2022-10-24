@@ -9,6 +9,8 @@ services:
       - proxy1
       - proxy2
       - proxy3
+#    command:
+#      - "-p=proxy1"
     container_name: user
     privileged: true
     networks:
@@ -32,6 +34,13 @@ services:
   proxy1:
     image: rinp/proxy
     container_name: proxy1
+    depends_on:
+      - redis
+    command:
+      - "--redis=redis:6379"
+      - "--name=proxy1"
+      - "--public-ip=proxy1"
+      - "--log-level=debug"
     networks:
       rinp-public:
         ipv4_address: 172.127.1.111
@@ -40,6 +49,12 @@ services:
   proxy2:
     image: rinp/proxy
     container_name: proxy2
+    depends_on:
+      - redis
+    command:
+      - "--redis=redis:6379"
+      - "--name=proxy2"
+      - "--public-ip=proxy2"
     networks:
       rinp-public:
         ipv4_address: 172.127.1.112
@@ -48,6 +63,12 @@ services:
   proxy3:
     image: rinp/proxy
     container_name: proxy3
+    depends_on:
+      - redis
+    command:
+      - "--redis=redis:6379"
+      - "--name=proxy3"
+      - "--public-ip=proxy3"
     networks:
       rinp-public:
         ipv4_address: 172.127.1.113
@@ -57,26 +78,59 @@ services:
   service:
     image: rinp/sidecar
     container_name: service
+    depends_on:
+      - redis
     command:
-      [
-        "-c=7.0.0.0/8",
-        "-p=12345",
-        "-s=11.22.33.44",
-      ]       
+       - "-c=7.0.0.0/8"
+       - "-p=12345"
+       - "-s=11.22.33.44"
+       - "--public-ip=service"
+       - "--redis=redis:6379"
     privileged: true
     networks:
       rinp-private:
         ipv4_address: 172.127.2.201
 
+  scheduler-sidecar:
+    image: rinp/sidecar
+    container_name: scheduler-sidecar
+    depends_on:
+      - redis
+      - scheduler
+    command:
+      - "-c=7.0.0.0/8"
+      - "-p=12345"
+      - "-s=11.22.33.55"
+      - "--public-ip=scheduler"
+      - "--redis=redis:6379"
+    privileged: true
+    network_mode: service:scheduler
+#    networks:
+#      rinp-private:
+#        ipv4_address: 172.127.2.202
+
   scheduler:
     # Virtual IP 11.22.33.55 
     image: rinp/scheduler
     container_name: scheduler
-    command: [ "--log-level=debug" ]
+    depends_on:
+      - redis
+    command:
+      - "--log-level=debug"
+      - "--redis=redis:6379"
     privileged: true
     networks:
       rinp-private:
         ipv4_address: 172.127.2.202
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      rinp-private:
+        ipv4_address: 172.127.2.220
 
 networks:
   rinp-public:

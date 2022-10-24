@@ -37,23 +37,35 @@
 Stores information about clients:
 
 - Virtual IP (key)
-- Valid Proxy (Note: when implementing proxy, we should take network latency into consideration, i.e. from the schedulers' message to proxy)
+- Valid Proxy IP **list** (Note: when implementing proxy, we should take network latency into consideration, i.e. from the schedulers' message to proxy)
 
 Note: 
 
-- Auth module will be setting expiration time according to the expiration time of the JWT token when clients logging in. When the client renews its token, the expiry time should be updated.
-- Proxies will be watching this, so they know which clients are valid. Also, proxies should use client side caching to reduce the number of requests to Redis when inspecting packets.
-- Scheduler will update the proxy information when it reschedules clients.
+- [x] Auth module will be setting expiration time according to the expiration time of the JWT token when clients logging in. When the client renews its token, the expiry time should be updated.
+- [x] Proxies will be watching this, so they know which clients are valid. Also, proxies should use client side caching to reduce the number of requests to Redis when inspecting packets. TODO: currently we use built-in client side caching. This is not what we want
+- [ ] Scheduler will update the proxy information when it reschedules clients.
 
 ### DB1
 
 Stores information about proxies:
 
 - Proxy name (key)
-- Public IP address
+- Public IP address : port
 
 Note: 
 
-- Proxies should update their key every 1s when they are alive. keys should have a TTL of 2s, so that we can remove the proxy when it is down. 
-- Scheduler will be watching this, so it knows which proxy is alive and assign clients to them.
-- Auth module will also use this information to choose the first proxy.
+- [x] Proxies should update their key every 1s when they are alive. Keys should have a TTL of 2s, so that we can remove the proxy when it is down. 
+- [ ] Scheduler will be watching this, so it knows which proxy is alive and assign clients to them.
+- [ ] Auth module will also use this information to choose the first proxy.
+
+### DB2
+
+Stores information about sidecars:
+
+- Virtual IP (key)
+- Actual IP : port
+
+Note:
+
+- [x] Sidecar should update their key every 5s when they are alive. Keys should have a TTL of 10s, so that we can remove the sidecar when it is down. 
+- [ ] Proxies will be watching this, so they know how to route traffic.

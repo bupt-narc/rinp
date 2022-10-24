@@ -1,8 +1,11 @@
 package proxy
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"strings"
+	"time"
 
 	"github.com/bupt-narc/rinp/pkg/packet"
 	"github.com/bupt-narc/rinp/pkg/util/nexthop"
@@ -10,6 +13,7 @@ import (
 )
 
 const (
+	// TODO: use cli arguments to specify these
 	defaultServiceCIDR      = "11.22.33.44/32"
 	defaultServiceAddress   = "service:12345"
 	defaultSchedulerCIDR    = "11.22.33.55/32"
@@ -79,9 +83,17 @@ func (c *ProxyConn) deal() {
 			continue
 		}
 
+		// Only allow traffic that is scheduled to this proxy
+		dst := pkt.GetDst().String()
+		if !isClientSchedulerHere(dst) && !isServiceAddr(dst) {
+			// TODO: lower the log level to DEBUG
+			// This is not a error. Just to make it obvious for now.
+			connLog.Errorf("traffic from client %s is not scheduled to this proxy")
+			continue
+		}
+
 		connLog.Debugf("recv from udp, src: %s, dst: %s", pkt.GetSrc(), pkt.GetDst())
 
-		// TODO get client NextHop from etcd
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
 			_, err := c.NextHop.GetNextHopByString(pkt.GetSrc().String())
 			if err == nil {
@@ -90,31 +102,137 @@ func (c *ProxyConn) deal() {
 				connLog.Debugf("adding new connection to %s: %s", pkt.GetSrc().String(), udpAddr.String())
 			}
 		}
+
+		// Get nextHop (client or sidecar)
+		nextHop := findNextHop(pkt.GetDst().String(), c.NextHop)
+		if nextHop == "" {
+			connLog.Errorf("cannot get nexthop")
+			continue
+		}
+
+		// Save connection to client. Packets returned from sidecar will use it.
+		// connection to sidecar will not be used later.
 		c.NextHop.SetNextHopByString(pkt.GetSrc().String(), udpAddr.String())
 
-		if _, err := c.NextHop.GetNextHop(pkt.GetSrc()); err != nil {
-			// TODO deal with unknown traffic client
-			connLog.Infof("find unknown traffic from %s", pkt.GetSrc().String())
+		nextUDPAddr, err := net.ResolveUDPAddr("udp4", nextHop)
+		if err != nil {
+			connLog.Errorf("cannot resolve udp addr: %s", err)
 			continue
 		}
 
-		if _, err := c.NextHop.GetNextHop(pkt.GetDst()); err != nil {
-			connLog.Errorf("find unknown traffic to %s", pkt.GetDst().String())
+		n, err = conn.WriteToUDP(packetData, nextUDPAddr)
+		if err != nil {
+			connLog.Errorf("cannot send packet to %s: %s", nextUDPAddr.String(), err)
 			continue
 		}
 
-		// transfer packet to next hop by UDP
-		nextHop, err := c.NextHop.GetNextHop(pkt.GetDst())
-		if err != nil {
-			connLog.Errorf("cannot find next hop for %s", pkt.GetDst().String())
-			continue
-		}
-		n, err = conn.WriteToUDP(packetData, nextHop)
-		if err != nil {
-			connLog.Errorf("cannot send packet to %s: %s", nextHop.String(), err)
-			continue
-		}
 		c.txBytes += uint64(n)
-		connLog.Debugf("send %d bytes to %s", n, nextHop.String())
+		connLog.Debugf("send %d bytes to %s", n, nextUDPAddr.String())
 	}
+}
+
+func isClientSchedulerHere(addr string) bool {
+	// TODO: DO NOT USE BUILT-IN CLIENT SIDE CACHING
+	// Because when cache misses, it will send a request to Redis.
+	// But all malicious packets are cache misses, this will cause a huge pressure on Redis.
+	// Instead, use manual cache that is synced with Redis.
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	clientMsg := redisClient.DoCache(ctx, redisClient.B().Get().Key(addr).Cache(), 30*time.Second)
+
+	if clientMsg.NonRedisError() != nil {
+		connLog.Errorf("error when getting client %s from redis: %s", addr, clientMsg.NonRedisError())
+		return false
+	}
+
+	_, err := clientMsg.ToMessage()
+
+	if err != nil && !strings.Contains(err.Error(), "nil message") {
+		return false
+	}
+
+	actualProxyName, _ := clientMsg.ToString()
+
+	actualHost, _, _ := net.SplitHostPort(actualProxyName)
+
+	return actualHost == opt.PublicIP
+}
+
+func isServiceAddr(addr string) bool {
+	// TODO: DO NOT USE BUILT-IN CLIENT SIDE CACHING
+	// Because when cache misses, it will send a request to Redis.
+	// But all malicious packets are cache misses, this will cause a huge pressure on Redis.
+	// Instead, use manual cache that is synced with Redis.
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	sidecarMsg := redisSidecar.DoCache(ctx, redisSidecar.B().Get().Key(addr).Cache(), 30*time.Second)
+
+	if sidecarMsg.NonRedisError() != nil {
+		connLog.Errorf("error when getting sidecar address from redis: %s", sidecarMsg.NonRedisError())
+		return false
+	}
+
+	_, err := sidecarMsg.ToMessage()
+
+	if err != nil {
+		return false
+	} else {
+		// Got a sidecar addr
+		return true
+	}
+
+	return false
+}
+
+// TODO: use local cache; refactor;
+func findNextHop(addr string, clientMap nexthop.NextHopMap) string {
+	isServerRoute := false
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	sidecarMsg := redisSidecar.DoCache(ctx, redisSidecar.B().Get().Key(addr).Cache(), 30*time.Second)
+	if sidecarMsg.NonRedisError() != nil {
+		connLog.Errorf("error when getting sidecar address from redis: %s", sidecarMsg.NonRedisError())
+		return ""
+	}
+
+	connLog.Debugf("find sidecar vip=%s, msg=%s", addr, sidecarMsg)
+
+	_, err := sidecarMsg.ToMessage()
+
+	if err == nil {
+		// Got a sidecar addr
+		isServerRoute = true
+	}
+
+	isClientRoute := false
+	udpAddr, err := clientMap.GetNextHopByString(addr)
+	var clientAddr string
+	if err == nil {
+		clientAddr = udpAddr.String()
+		isClientRoute = true
+	}
+
+	connLog.Debugf("find nexthop vip=%s, msg=%s", addr, udpAddr.String())
+
+	if !isClientRoute && !isServerRoute {
+		return ""
+	}
+
+	// Nexthop from Redis have higher priority.
+	if isServerRoute {
+		connLog.Debugf("returning sidecar addr")
+		addr, err := sidecarMsg.ToString()
+		if err != nil {
+			return ""
+		}
+		return addr
+	}
+
+	if isClientRoute {
+		connLog.Debugf("returning client addr")
+		return clientAddr
+	}
+
+	return ""
 }

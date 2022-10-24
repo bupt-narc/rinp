@@ -10,12 +10,20 @@ import (
 
 	"github.com/bupt-narc/rinp/pkg/version"
 	"github.com/pkg/errors"
+	"github.com/rueian/rueidis"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
+var (
+	redisProxy  rueidis.Client
+	redisClient rueidis.Client
+	opt         *Option
+)
+
 func runCli(cmd *cobra.Command, args []string) error {
-	opt, err := NewOption().
+	var err error
+	opt, err = NewOption().
 		WithDefaults().
 		WithEnvVariables().
 		WithCliFlags(cmd.Flags()).
@@ -38,6 +46,21 @@ func runCli(cmd *cobra.Command, args []string) error {
 	if opt.EnablePProf {
 		logrus.Info("performance profiling enabled, http server listing at :8080/debug/pprof")
 		go http.ListenAndServe(":8080", nil)
+	}
+
+	redisProxy, err = rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: []string{opt.Redis},
+		SelectDB:    1,
+	})
+	if err != nil {
+		return err
+	}
+	redisClient, err = rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: []string{opt.Redis},
+		SelectDB:    0,
+	})
+	if err != nil {
+		return err
 	}
 
 	conn, err := NewSchedulerConn(opt.Port)

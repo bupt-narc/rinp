@@ -1,19 +1,24 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
 	"time"
 
+	"github.com/bupt-narc/rinp/pkg/util/iplist"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v5"
 	"github.com/pkg/errors"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models/schema"
+	"github.com/rueian/rueidis"
 )
 
 var (
@@ -21,7 +26,15 @@ var (
 	ServerCIDR        []string
 	FirstProxyAddress string
 	SchedulerAddress  string
+	redisConn         rueidis.Client
 )
+
+// CLI flags
+var (
+	redisAddr = "redis:6379"
+)
+
+// TODO: make JWT expiry time shorter
 
 func init() {
 	// init seed
@@ -41,7 +54,23 @@ func init() {
 }
 
 func Execute() error {
+	var (
+		err error
+	)
+
 	app := pocketbase.New()
+
+	fmt.Printf("auth token valid for %d\n", app.Settings().UserAuthToken.Duration)
+
+	fmt.Println(redisAddr)
+	redisConn, err = rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: []string{redisAddr},
+		SelectDB:    0,
+	})
+	if err != nil {
+		return err
+	}
+	defer redisConn.Close()
 
 	app.OnUserAfterCreateRequest().Add(func(e *core.UserCreateEvent) error {
 		userID := e.User.Id
@@ -66,6 +95,29 @@ func Execute() error {
 				return errors.Wrapf(err, "cannot save record %s", r.Id)
 			}
 		}
+		return nil
+	})
+
+	app.OnUserAuthRequest().Add(func(e *core.UserAuthEvent) error {
+		ctx := context.Background()
+
+		vip := e.User.Profile.GetDataValue("vip").(string)
+
+		token, err := jwt.Parse(e.Token, func(token *jwt.Token) (interface{}, error) {
+			return []byte(e.User.TokenKey + app.Settings().UserAuthToken.Secret), nil
+		})
+		if err != nil {
+			return errors.Wrapf(err, "error when parsing jwt")
+		}
+
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			expireSeconds := int64(claims["exp"].(float64)) - time.Now().Unix()
+			err := redisConn.Do(ctx, redisConn.B().Set().Key(vip).Value(iplist.ToString(FirstProxyAddress)).ExSeconds(expireSeconds).Build()).Error()
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 
@@ -117,7 +169,15 @@ func Execute() error {
 		return nil
 	})
 
-	err := app.Start()
+	app.RootCmd.AddCommand(cmd.NewServeCommand(app, false))
+	app.RootCmd.AddCommand(cmd.NewMigrateCommand(app))
+
+	flags := app.RootCmd.PersistentFlags()
+
+	// FIXME: unfunctional flag
+	flags.StringVarP(&redisAddr, "redis", "r", "127.0.0.1:6379", "Redis address")
+
+	err = app.Execute()
 
 	return err
 }

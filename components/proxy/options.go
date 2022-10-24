@@ -12,6 +12,9 @@ type Option struct {
 	LogLevel    string
 	Port        int
 	EnablePProf bool
+	Name        string
+	PublicIP    string
+	Redis       string
 }
 
 func NewOption() *Option {
@@ -21,7 +24,7 @@ func NewOption() *Option {
 func (o *Option) WithDefaults() *Option {
 	o.LogLevel = defaultLogLevel
 	o.Port = defaultPort
-	o.EnablePProf = defaultEnablePProf
+	o.Redis = defaultRedis
 	return o
 }
 
@@ -42,6 +45,15 @@ func (o *Option) WithCliFlags(flags *pflag.FlagSet) *Option {
 	if v, err := flags.GetBool(flagEnablePProf); err == nil && flags.Changed(flagEnablePProf) {
 		o.EnablePProf = v
 	}
+	if v, err := flags.GetString(flagName); err == nil && flags.Changed(flagName) {
+		o.Name = v
+	}
+	if v, err := flags.GetString(flagPublicIP); err == nil && flags.Changed(flagPublicIP) {
+		o.PublicIP = v
+	}
+	if v, err := flags.GetString(flagRedis); err == nil && flags.Changed(flagRedis) {
+		o.Redis = v
+	}
 	return o
 }
 
@@ -52,6 +64,15 @@ func (o *Option) Validate() (*Option, error) {
 	}
 	if o.Port < 0 || o.Port > 65535 {
 		return nil, fmt.Errorf("invalid port number %d", o.Port)
+	}
+	if o.Name == "" {
+		return nil, fmt.Errorf("name should not be empty")
+	}
+	if o.PublicIP == "" {
+		return nil, fmt.Errorf("public ip should not be empty")
+	}
+	if o.Redis == "" {
+		return nil, fmt.Errorf("redis should not be empty")
 	}
 	return o, nil
 }

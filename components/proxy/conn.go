@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	DefaultMTU      = 1400
 	statDuration    = 1 * time.Second
 	minimumStatSize = 1024
 )

@@ -2,20 +2,31 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bupt-narc/rinp/pkg/version"
 	"github.com/pkg/errors"
+	"github.com/rueian/rueidis"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
+var (
+	redisProxy   rueidis.Client
+	redisClient  rueidis.Client
+	redisSidecar rueidis.Client
+	opt          *Option
+)
+
 func runCli(cmd *cobra.Command, args []string) error {
-	opt, err := NewOption().
+	var err error
+	opt, err = NewOption().
 		WithDefaults().
 		WithEnvVariables().
 		WithCliFlags(cmd.Flags()).
@@ -40,6 +51,28 @@ func runCli(cmd *cobra.Command, args []string) error {
 		go http.ListenAndServe(":8080", nil)
 	}
 
+	redisProxy, err = rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: []string{opt.Redis},
+		SelectDB:    1,
+	})
+	if err != nil {
+		return err
+	}
+	redisClient, err = rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: []string{opt.Redis},
+		SelectDB:    0,
+	})
+	if err != nil {
+		return err
+	}
+	redisSidecar, err = rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: []string{opt.Redis},
+		SelectDB:    2,
+	})
+	if err != nil {
+		return err
+	}
+
 	conn, err := NewProxyConn(opt.Port)
 	if err != nil {
 		return errors.Wrap(err, "cannot create connection")
@@ -57,7 +90,28 @@ func runCli(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
+	go selfHeartbeat(opt.Name, opt.PublicIP, opt.Port)
+
 	conn.Run(ctx)
 
 	return nil
+}
+
+func selfHeartbeat(name, ip string, port int) {
+	do := func(ctx context.Context) {
+		err := redisProxy.Do(ctx, redisProxy.B().Set().Key(name).Value(fmt.Sprintf("%s:%d", ip, port)).ExSeconds(2).Build()).Error()
+		if err != nil {
+			logrus.Errorf("redis cannot set %s:%s", name, ip)
+			return
+		}
+	}
+
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+
+		defer cancel()
+		defer time.Sleep(1 * time.Second)
+
+		do(ctx)
+	}
 }

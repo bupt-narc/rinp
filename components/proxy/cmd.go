@@ -18,6 +18,17 @@ const (
 
 	flagEnablePProf      = "enable-pprof"
 	flagEnablePProfUsage = "Enable performance profiling at :8080/debug/pprof"
+
+	flagName      = "name"
+	flagNameShort = "n"
+	flagNameUsage = "Name of this proxy"
+
+	flagPublicIP      = "public-ip"
+	flagPublicIPUsage = "Public IP address of this proxy"
+
+	flagRedis      = "redis"
+	flagRedisShort = "r"
+	flagRedisUsage = "Redis address"
 )
 
 const (
@@ -29,6 +40,9 @@ var (
 	defaultLogLevel    = "info"
 	defaultEnablePProf = false
 	defaultPort        = 5114
+	defaultName        = ""
+	defaultPublicIP    = ""
+	defaultRedis       = "localhost:6379"
 )
 
 const (
@@ -70,4 +84,7 @@ func addFlags(f *pflag.FlagSet) {
 	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
 	f.IntP(flagPort, flagPortShort, defaultPort, flagPortUsage)
 	f.Bool(flagEnablePProf, defaultEnablePProf, flagEnablePProfUsage)
+	f.StringP(flagName, flagNameShort, defaultName, flagNameUsage)
+	f.String(flagPublicIP, defaultPublicIP, flagPublicIPUsage)
+	f.StringP(flagRedis, flagRedisShort, defaultRedis, flagRedisUsage)
 }

@@ -12,6 +12,7 @@ type Option struct {
 	LogLevel    string
 	Port        int
 	EnablePProf bool
+	Redis       string
 }
 
 func NewOption() *Option {
@@ -42,6 +43,9 @@ func (o *Option) WithCliFlags(flags *pflag.FlagSet) *Option {
 	if v, err := flags.GetBool(flagEnablePProf); err == nil && flags.Changed(flagEnablePProf) {
 		o.EnablePProf = v
 	}
+	if v, err := flags.GetString(flagRedis); err == nil && flags.Changed(flagRedis) {
+		o.Redis = v
+	}
 	return o
 }
 
@@ -52,6 +56,9 @@ func (o *Option) Validate() (*Option, error) {
 	}
 	if o.Port < 0 || o.Port > 65535 {
 		return nil, fmt.Errorf("invalid port number %d", o.Port)
+	}
+	if o.Redis == "" {
+		return nil, fmt.Errorf("redis should not be empty")
 	}
 	return o, nil
 }

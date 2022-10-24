@@ -8,7 +8,7 @@ import (
 // NextHopMap is a map of CIDR to next hop IP address.
 type NextHopMap map[string]*net.UDPAddr // FIXME: do not use pointers
 
-// SetNextHop adds a CIDR to next hop IP address mapping.
+// SetNextHop adds a CIDR to next hop IP address mapping. // TODO: make nextHop *net.UDPAddr
 func (m NextHopMap) SetNextHop(cidr *net.IPNet, nextHop string) error {
 	// transfer string to net.UDPAddr
 	udpAddr, err := net.ResolveUDPAddr("udp4", nextHop)
@@ -30,6 +30,7 @@ func (m NextHopMap) SetNextHopByString(ip, nextHop string) error {
 }
 
 // GetNextHop returns the next hop IP address for the given IP address.
+// TODO: change CIDR to single IP
 func (m NextHopMap) GetNextHop(ip net.IP) (*net.UDPAddr, error) {
 	// TODO improve performance
 	for cidrStr, nextHop := range m {

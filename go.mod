@@ -4,11 +4,13 @@ go 1.18
 
 require (
 	github.com/dboslee/lru v0.0.2-0.20220706221300-40f73e764fbf
+	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/google/gopacket v1.1.19
 	github.com/labstack/echo/v5 v5.0.0-20220201181537-ed2888cfa198
 	github.com/pkg/errors v0.9.1
 	github.com/pocketbase/dbx v1.6.0
 	github.com/pocketbase/pocketbase v0.7.9
+	github.com/rueian/rueidis v0.0.81
 	github.com/sirupsen/logrus v1.9.0
 	github.com/slackhq/nebula v1.6.1
 	github.com/spf13/cobra v1.6.0
@@ -71,7 +73,6 @@ require (
 	github.com/go-openapi/swag v0.21.1 // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect

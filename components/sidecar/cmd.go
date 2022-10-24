@@ -26,6 +26,13 @@ const (
 
 	flagEnablePProf      = "enable-pprof"
 	flagEnablePProfUsage = "Enable performance profiling at :8080/debug/pprof"
+
+	flagPublicIP      = "public-ip"
+	flagPublicIPUsage = "Public IP address of this sidecar"
+
+	flagRedis      = "redis"
+	flagRedisShort = "r"
+	flagRedisUsage = "Redis address"
 )
 
 const (
@@ -40,6 +47,8 @@ var (
 	defaultServerVirtualIP = ""
 	defaultClientCIDRs     = []string{}
 	defaultEnablePProf     = false
+	defaultPublicIP        = ""
+	defaultRedis           = "localhost:6379"
 )
 
 const (
@@ -83,4 +92,6 @@ func addFlags(f *pflag.FlagSet) {
 	f.StringP(flagServerVirtualIP, flagServerVirtualIPShort, defaultServerVirtualIP, flagServerVirtualIPUsage)
 	f.StringArrayP(flagClientCIDRs, flagClientCIDRsShort, defaultClientCIDRs, flagClientCIDRsUsage)
 	f.Bool(flagEnablePProf, defaultEnablePProf, flagEnablePProfUsage)
+	f.String(flagPublicIP, defaultPublicIP, flagPublicIPUsage)
+	f.StringP(flagRedis, flagRedisShort, defaultRedis, flagRedisUsage)
 }
