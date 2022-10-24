@@ -40,7 +40,7 @@ services:
       - "--redis=redis:6379"
       - "--name=proxy1"
       - "--public-ip=proxy1"
-      - "--log-level=debug"
+#      - "--log-level=debug"
     networks:
       rinp-public:
         ipv4_address: 172.127.1.111
@@ -116,7 +116,7 @@ services:
     depends_on:
       - redis
     command:
-      - "--log-level=debug"
+#      - "--log-level=debug"
       - "--redis=redis:6379"
     privileged: true
     networks:

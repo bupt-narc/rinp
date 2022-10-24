@@ -84,11 +84,11 @@ func (c *ProxyConn) deal() {
 		}
 
 		// Only allow traffic that is scheduled to this proxy
-		dst := pkt.GetDst().String()
-		if !isClientSchedulerHere(dst) && !isServiceAddr(dst) {
+		src := pkt.GetSrc().String()
+		if !isClientSchedulerHere(src) && !isServiceAddr(src) {
 			// TODO: lower the log level to DEBUG
 			// This is not a error. Just to make it obvious for now.
-			connLog.Errorf("traffic from client %s is not scheduled to this proxy")
+			connLog.Errorf("traffic from client %s is not scheduled to this proxy", src)
 			continue
 		}
 
@@ -221,11 +221,11 @@ func findNextHop(addr string, clientMap nexthop.NextHopMap) string {
 
 	// Nexthop from Redis have higher priority.
 	if isServerRoute {
-		connLog.Debugf("returning sidecar addr")
 		addr, err := sidecarMsg.ToString()
 		if err != nil {
 			return ""
 		}
+		connLog.Debugf("returning sidecar addr")
 		return addr
 	}
 
