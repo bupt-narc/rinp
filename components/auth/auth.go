@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/bupt-narc/rinp/pkg/util/iplist"
@@ -19,6 +20,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models/schema"
 	"github.com/rueian/rueidis"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -59,6 +61,8 @@ func Execute() error {
 	)
 
 	app := pocketbase.New()
+
+	addFlags(app)
 
 	fmt.Printf("auth token valid for %d\n", app.Settings().UserAuthToken.Duration)
 
@@ -172,14 +176,18 @@ func Execute() error {
 	app.RootCmd.AddCommand(cmd.NewServeCommand(app, false))
 	app.RootCmd.AddCommand(cmd.NewMigrateCommand(app))
 
-	flags := app.RootCmd.PersistentFlags()
-
-	// FIXME: unfunctional flag
-	flags.StringVarP(&redisAddr, "redis", "r", "127.0.0.1:6379", "Redis address")
-
 	err = app.Execute()
 
 	return err
+}
+
+func addFlags(app *pocketbase.PocketBase) {
+	flags := app.RootCmd.PersistentFlags()
+	flags.StringVarP(&redisAddr, "redis", "r", redisAddr, "Redis address")
+	err := app.RootCmd.ParseFlags(os.Args[1:])
+	if err != nil {
+		logrus.Errorf("error when parsing flags: %s", err)
+	}
 }
 
 // Generate random alpha-numeric string
