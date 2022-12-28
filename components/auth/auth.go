@@ -125,50 +125,51 @@ func Execute() error {
 		return nil
 	})
 
+	// create vip filed for user profile
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-		// create vip filed for user profile
-		{
-			collection, err := app.Dao().FindCollectionByNameOrId("systemprofiles0")
+
+		collection, err := app.Dao().FindCollectionByNameOrId("systemprofiles0")
+		if err != nil {
+			return errors.Wrapf(err, "cannot find systemprofiles0")
+		}
+
+		vipField := collection.Schema.GetFieldByName("vip")
+		if vipField == nil {
+			collection.Schema.AddField(&schema.SchemaField{
+				System:   true,
+				Id:       RandomString(8),
+				Name:     "vip",
+				Type:     schema.FieldTypeText,
+				Required: false,
+				Unique:   false,
+				Options:  nil,
+			})
+
+			err = app.Dao().SaveCollection(collection)
 			if err != nil {
-				return errors.Wrapf(err, "cannot find systemprofiles0")
-			}
-
-			vipField := collection.Schema.GetFieldByName("vip")
-			if vipField == nil {
-				collection.Schema.AddField(&schema.SchemaField{
-					System:   true,
-					Id:       RandomString(8),
-					Name:     "vip",
-					Type:     schema.FieldTypeText,
-					Required: false,
-					Unique:   false,
-					Options:  nil,
-				})
-
-				err = app.Dao().SaveCollection(collection)
-				if err != nil {
-					return errors.Wrapf(err, "cannot save collection")
-				}
+				return errors.Wrapf(err, "cannot save collection")
 			}
 		}
 
-		// add route for server CIDR, first proxy ip, scheduler ip
-		{
-			_, err := e.Router.AddRoute(echo.Route{
-				Method: http.MethodGet,
-				Path:   "/api/v1/rinp",
-				Handler: func(c echo.Context) error {
-					return c.JSON(http.StatusOK, map[string]interface{}{
-						"server_cidr":         ServerCIDR,
-						"first_proxy_address": FirstProxyAddress,
-						"scheduler_address":   SchedulerAddress,
-					})
-				},
-				Middlewares: []echo.MiddlewareFunc{apis.RequireAdminOrUserAuth()},
-			})
-			if err != nil {
-				return errors.Wrapf(err, "cannot add route")
-			}
+		return nil
+	})
+
+	// add route for server CIDR, first proxy ip, scheduler ip
+	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		_, err := e.Router.AddRoute(echo.Route{
+			Method: http.MethodGet,
+			Path:   "/api/v1/rinp",
+			Handler: func(c echo.Context) error {
+				return c.JSON(http.StatusOK, map[string]interface{}{
+					"server_cidr":         ServerCIDR,
+					"first_proxy_address": FirstProxyAddress,
+					"scheduler_address":   SchedulerAddress,
+				})
+			},
+			Middlewares: []echo.MiddlewareFunc{apis.RequireAdminOrUserAuth()},
+		})
+		if err != nil {
+			return errors.Wrapf(err, "cannot add route")
 		}
 		return nil
 	})
