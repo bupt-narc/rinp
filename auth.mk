@@ -1,4 +1,4 @@
-# Copyright 2022 The KubeVela Authors.
+# Copyright 2022 Charlie Chiang
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,20 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Setup make
+include makefiles/common.mk
+
+# Settings for this subproject
+# Entry file, containing func main
+ENTRY           := cmd/auth/main.go
+# All supported platforms for binary distribution
+BIN_PLATFORMS   := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
+# All supported platforms for container image distribution
+IMAGE_PLATFORMS := linux/amd64 linux/arm64
+# Binary basename (.exe will be automatically added when building for Windows)
+BIN             := auth
+# Container image name, without repo or tags
+IMAGE_NAME      := $(BIN)
+# Container image repositories to push to (supports multiple repos)
+IMAGE_REPOS     := rinp # docker.io/charlie0129
+
+# Setup make variables
 include makefiles/consts.mk
 
-# CLI entry file
-ENTRY         := cmd/auth/main.go
+# Add additional targets for this subproject here.
+# foo:
+# 	echo "this is foo"
 
-# Binary targets that we support.
-# When doing all-build, these targets will be built.
-BIN_PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
-IMG_PLATFORMS := linux/amd64 linux/arm64
-
-# Binary basename, without extension
-BIN           := auth
-
-# Docker image tag
-IMGTAGS  ?= $(addsuffix /$(BIN):$(IMG_VERSION),$(REGISTRY))
-
-include makefiles/common-targets.mk
+# Setup common targets
+include makefiles/targets.mk

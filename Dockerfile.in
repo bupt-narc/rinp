@@ -1,4 +1,4 @@
-# Copyright 2022 The KubeVela Authors.
+# Copyright 2022 Charlie Chiang
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 # otherwise it won't work. A valid Dockerfile will be generated
 # using this template. Refer to Makefile for how it can be done.
 
-ARG BASE_IMAGE=scratch
+# Default value is specified and will be overridden by the one in Makefile
+ARG BASE_IMAGE=gcr.io/distroless/static:nonroot
 
 FROM ${BASE_IMAGE}
 
@@ -28,6 +29,6 @@ ARG TARGETOS
 ARG OS
 ARG VERSION
 
-COPY bin/${BIN}-${VERSION}/${BIN}-${VERSION}-${TARGETOS:-${OS:-linux}}-${TARGETARCH:-${ARCH:-amd64}} /${BIN}
+COPY ${BIN}-${VERSION}-${TARGETOS:-${OS:-linux}}-${TARGETARCH:-${ARCH:-amd64}} /${BIN}
 
 ENTRYPOINT ["/${BIN}"]

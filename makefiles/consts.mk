@@ -1,4 +1,4 @@
-# Copyright 2022 The KubeVela Authors.
+# Copyright 2022 Charlie Chiang
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,50 +12,107 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Set this to 1 to enable debugging output.
-DBG_MAKEFILE ?=
-ifeq ($(DBG_MAKEFILE),1)
-    $(warning ***** starting Makefile for goal(s) "$(MAKECMDGOALS)")
-    $(warning ***** $(shell date))
-else
-    # If we're not debugging the Makefile, don't echo recipes.
-    MAKEFLAGS += -s
+# Those variables assigned with ?= can be overridden by setting them
+# manually on the command line or using environment variables.
+
+# Use build container or local go sdk. If use have go installed, then
+# we use the local go sdk by default. Set USE_BUILD_CONTAINER to 1 manually
+# to use build container.
+USE_BUILD_CONTAINER ?=
+ifeq (, $(shell which go))
+  USE_BUILD_CONTAINER := 1
+endif
+# Go version used as the image of the build container, grabbed from go.mod
+GO_VERSION       := $(shell grep -E '^go [[:digit:]]{1,3}\.[[:digit:]]{1,3}$$' go.mod | sed 's/go //')
+# Local Go release version (only supports go1.16 and later)
+LOCAL_GO_VERSION := $(shell go env GOVERSION 2>/dev/null | grep -oE "go[[:digit:]]{1,3}\.[[:digit:]]{1,3}" || echo "none")
+ifneq (1, $(USE_BUILD_CONTAINER)) # If not using build container, whcih means user have go installed. We need some checks.
+  # Before go1.16, there is no GOVERSION. We don't support such case, so build container will be used.
+  ifeq (none, $(LOCAL_GO_VERSION))
+    $(warning You have $(shell go version | grep -oE " go[[:digit:]]{1,3}\.[[:digit:]]{1,3}.* " | xargs) locally, \
+    which is not supported. Containerized build environment will be used instead.)
+    USE_BUILD_CONTAINER := 1
+  endif
+  # Warn if local go release version is different from what is specified in go.mod.
+  ifneq (none, $(LOCAL_GO_VERSION))
+    ifneq (go$(GO_VERSION), $(LOCAL_GO_VERSION))
+      $(warning Your local Go release ($(LOCAL_GO_VERSION)) is different from the one that this go module assumes (go$(GO_VERSION)).)
+    endif
+  endif
 endif
 
-# No, we don't want builtin rules.
-MAKEFLAGS += --no-builtin-rules
-MAKEFLAGS += --warn-undefined-variables
-# Get rid of .PHONY everywhere.
-MAKEFLAGS += --always-make
+# Build container image
+BUILD_IMAGE ?= golang:$(GO_VERSION)-alpine
 
-# Use bash explicitly
-SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
+# The base image of container artifacts
+BASE_IMAGE ?= gcr.io/distroless/static:nonroot
 
-# If user has not defined target, set some default value, same as host machine.
-OS          := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
-ARCH        := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
-# Use git tags to set the version string
-VERSION     ?= $(shell git describe --tags --always --dirty)
-IMG_VERSION ?= $(shell bash -c " \
-if [[ ! $(VERSION) =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}(-(alpha|beta)\.[0-9]{1,2})?$$ ]]; then \
-  echo latest;     \
-else               \
-  echo $(VERSION); \
-fi")
+# Set DEBUG to 1 to optimize binary for debugging, otherwise for release
+DEBUG ?=
 
+# env to passthrough to the build container
+GOFLAGS     ?=
+GOPROXY     ?=
+HTTP_PROXY  ?=
+HTTPS_PROXY ?=
+
+# Version string, use git tag by default
+VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "UNKNOWN")
+
+# Container image tag, same as VERSION by default
+# if VERSION is not a semantic version (e.g. local uncommitted versions), then use latest
+IMAGE_TAG ?= $(shell bash -c " \
+  if [[ ! $(VERSION) =~ ^v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(-(alpha|beta)\.[0-9]{1,3})?$$ ]]; then \
+    echo latest;     \
+  else               \
+    echo $(VERSION); \
+  fi")
+
+# Full Docker image name (e.g. docker.io/oamdev/kubetrigger:latest)
+IMAGE_REPO_TAGS  ?= $(addsuffix /$(IMAGE_NAME):$(IMAGE_TAG),$(IMAGE_REPOS))
+
+GOOS        ?=
+GOARCH      ?=
+# If user has not defined GOOS/GOARCH, use Go defaults.
+# If user don't have Go, use the os/arch of their machine.
+ifeq (, $(shell which go))
+  HOSTOS     := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+  HOSTARCH   := $(shell uname -m)
+  ifeq ($(HOSTARCH),x86_64)
+    HOSTARCH := amd64
+  endif
+  OS         := $(if $(GOOS),$(GOOS),$(HOSTOS))
+  ARCH       := $(if $(GOARCH),$(GOARCH),$(HOSTARCH))
+else
+  OS         := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
+  ARCH       := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
+endif
+
+# Windows have .exe in the binary name
 BIN_EXTENSION :=
 ifeq ($(OS), windows)
     BIN_EXTENSION := .exe
 endif
 
-# Include debug info in binary
-DBG_BUILD   ?=
-# Use full binary name with os arch in it
-FULL_NAME   ?=
-GOFLAGS     ?=
-GOPROXY     ?=
-# The base image of Dockerfile
-BASE_IMAGE  ?=
+# Binary name
+BIN_BASENAME      := $(BIN)$(BIN_EXTENSION)
+# Binary name with extended info, i.e. version-os-arch
+BIN_FULLNAME      := $(BIN)-$(VERSION)-$(OS)-$(ARCH)$(BIN_EXTENSION)
+# Package filename (generated by `make package'). Use zip for Windows, tar.gz for all other platforms.
+PKG_FULLNAME      := $(BIN_FULLNAME).tar.gz
+# Checksum filename
+CHECKSUM_FULLNAME := $(BIN)-$(VERSION)-checksums.txt
+ifeq ($(OS), windows)
+    PKG_FULLNAME  := $(subst .exe,,$(BIN_FULLNAME)).zip
+endif
 
-# Registry to push to
-REGISTRY := rinp # ghcr.io/bupt-narc
+# This holds build output and helper tools
+DIST           := bin
+# This holds build cache, if build container is used
+GOCACHE        := .go
+# Full output directory
+BIN_OUTPUT_DIR := $(DIST)/$(BIN)-$(VERSION)
+PKG_OUTPUT_DIR := $(BIN_OUTPUT_DIR)/packages
+# Full output path with filename
+OUTPUT         := $(BIN_OUTPUT_DIR)/$(BIN_FULLNAME)
+PKG_OUTPUT     := $(PKG_OUTPUT_DIR)/$(PKG_FULLNAME)
