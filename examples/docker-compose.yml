@@ -18,7 +18,9 @@ services:
         ipv4_address: 172.127.1.10
 
   auth:
-    image: rinp/auth   
+    image: rinp/auth
+    depends_on:
+      - redis
     container_name: auth
     ports:
       - "8090:8090"
