@@ -11,11 +11,13 @@ import (
 )
 
 type Option struct {
-	LogLevel        string
-	ProxyAddress    string
-	ClientVirtualIP net.IP
-	ServerCIDRs     []*net.IPNet
-	EnablePProf     bool
+	LogLevel         string
+	ProxyAddress     string
+	ClientVirtualIP  net.IP
+	ServerCIDRs      []*net.IPNet
+	EnablePProf      bool
+	AuthBaseURL      string
+	SchedulerAddress string
 }
 
 func NewOption() *Option {
@@ -26,7 +28,7 @@ func (o *Option) WithDefaults() *Option {
 	o.LogLevel = defaultLogLevel
 	o.ProxyAddress = defaultProxyAddress
 	o.ClientVirtualIP = net.ParseIP(defaultClientVirtualIP)
-	o.ServerCIDRs, _ = overlay.StringToCIDRs(defualtServerCIDRs)
+	o.ServerCIDRs, _ = overlay.StringToCIDRs(defaultServerCIDRs)
 	o.EnablePProf = defaultEnablePProf
 	return o
 }
@@ -56,8 +58,18 @@ func (o *Option) WithCliFlags(flags *pflag.FlagSet) *Option {
 			o.ServerCIDRs = nil
 		}
 	}
+	if v, err := flags.GetString(flagSchedulerAddress); err == nil && flags.Changed(flagSchedulerAddress) {
+		o.SchedulerAddress = v
+	}
+	return o
+}
+
+func (o *Option) WithPreFlags(flags *pflag.FlagSet) *Option {
 	if v, err := flags.GetBool(flagEnablePProf); err == nil && flags.Changed(flagEnablePProf) {
 		o.EnablePProf = v
+	}
+	if v, err := flags.GetString(flagAuthBaseURL); err == nil && flags.Changed(flagAuthBaseURL) {
+		o.AuthBaseURL = v
 	}
 	return o
 }

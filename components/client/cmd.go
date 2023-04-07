@@ -26,6 +26,12 @@ const (
 
 	flagEnablePProf      = "enable-pprof"
 	flagEnablePProfUsage = "Enable performance profiling at :8080/debug/pprof"
+
+	flagAuthBaseURL      = "auth-base-url"
+	flagAuthBaseURLUsage = "The base URL of auth service"
+
+	flagSchedulerAddress      = "scheduler"
+	flagSchedulerAddressUsage = "The address of scheduler"
 )
 
 const (
@@ -34,11 +40,13 @@ const (
 )
 
 var (
-	defaultLogLevel        = "info"
-	defaultProxyAddress    = ""
-	defaultClientVirtualIP = ""
-	defualtServerCIDRs     = []string{}
-	defaultEnablePProf     = false
+	defaultLogLevel         = "info"
+	defaultProxyAddress     = "proxy1:5114"
+	defaultClientVirtualIP  = "7.1.2.3"
+	defaultServerCIDRs      = []string{"11.22.33.0/24"}
+	defaultEnablePProf      = false
+	defaultAuthBaseURL      = "http://auth:8090"
+	defaultSchedulerAddress = "http://11.22.33.55"
 )
 
 const (
@@ -80,6 +88,8 @@ func addFlags(f *pflag.FlagSet) {
 	f.String(flagLogLevel, defaultLogLevel, flagLogLevelUsage)
 	f.StringP(flagProxyAddress, flagProxyAddressShort, defaultProxyAddress, flagProxyAddressUsage)
 	f.StringP(flagClientVirtualIP, flagClientVirtualIPShort, defaultClientVirtualIP, flagClientVirtualIPUsage)
-	f.StringArrayP(flagServerCIDRs, flagServerCIDRsShort, defualtServerCIDRs, flagServerCIDRsUsage)
+	f.StringArrayP(flagServerCIDRs, flagServerCIDRsShort, defaultServerCIDRs, flagServerCIDRsUsage)
 	f.Bool(flagEnablePProf, defaultEnablePProf, flagEnablePProfUsage)
+	f.String(flagAuthBaseURL, defaultAuthBaseURL, flagAuthBaseURLUsage)
+	f.String(flagSchedulerAddress, defaultSchedulerAddress, flagSchedulerAddressUsage)
 }

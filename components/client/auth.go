@@ -11,14 +11,14 @@ import (
 )
 
 var (
-	baseURL         string = "http://auth:8090" // TODO input by user
 	defaultEmail    string = "example@example.com"
 	defaultPassword string = "example@example.com"
 )
 
 var (
-	token string
-	vip   string
+	baseURL string
+	token   string
+	vip     string
 )
 
 func login(email, password string) error {
@@ -88,5 +88,6 @@ func setInfo(o *Option, email, password string) error {
 }
 
 func setInfoByDefault(o *Option) error {
+	baseURL = o.AuthBaseURL
 	return setInfo(o, defaultEmail, defaultPassword)
 }

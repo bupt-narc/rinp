@@ -20,6 +20,7 @@ import (
 func runCli(cmd *cobra.Command, args []string) error {
 	opt, err := NewOption().
 		WithDefaults().
+		WithPreFlags(cmd.Flags()).
 		WithNetwork().
 		WithEnvVariables().
 		WithCliFlags(cmd.Flags()).
@@ -65,7 +66,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 		<-sigterm
 		cancel()
 	}()
-	go switchProxyAddress(ctx, conn, "11.22.33.55:5525") // TODO add scheduler address to option
+	go switchProxyAddress(ctx, conn, opt.SchedulerAddress)
 	conn.Run(ctx)
 
 	return nil
