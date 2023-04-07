@@ -73,13 +73,13 @@ func runCli(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	conn, err := NewProxyConn(opt.Port)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	conn, err := NewProxyConn(ctx, opt.Port)
 	if err != nil {
 		return errors.Wrap(err, "cannot create connection")
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
 		// Listen to termination signals.

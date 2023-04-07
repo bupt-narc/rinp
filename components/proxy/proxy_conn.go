@@ -8,16 +8,9 @@ import (
 	"time"
 
 	"github.com/bupt-narc/rinp/pkg/packet"
+	"github.com/bupt-narc/rinp/pkg/repository"
 	"github.com/bupt-narc/rinp/pkg/util/nexthop"
 	"github.com/sirupsen/logrus"
-)
-
-const (
-	// TODO: use cli arguments to specify these
-	defaultServiceCIDR      = "11.22.33.44/32"
-	defaultServiceAddress   = "service:12345"
-	defaultSchedulerCIDR    = "11.22.33.55/32"
-	defaultSchedulerAddress = "scheduler:12345"
 )
 
 type ProxyConn struct {
@@ -25,6 +18,7 @@ type ProxyConn struct {
 }
 
 func NewProxyConn(
+	ctx context.Context,
 	listenPort int,
 ) (*ProxyConn, error) {
 	conn := &ProxyConn{
@@ -35,10 +29,18 @@ func NewProxyConn(
 	}
 
 	// TODO get NextHop from etcd
-	_, ServiceCIDR, _ := net.ParseCIDR(defaultServiceCIDR)
-	conn.NextHop.SetNextHop(ServiceCIDR, defaultServiceAddress)
-	_, SchedulerCIDR, _ := net.ParseCIDR(defaultSchedulerCIDR)
-	conn.NextHop.SetNextHop(SchedulerCIDR, defaultSchedulerAddress)
+	nextHops, err := repository.GetServicesNextHop(ctx, redisSidecar)
+	if err != nil {
+		return nil, err
+	}
+	for service, nextHop := range nextHops {
+		_, cidr, err := net.ParseCIDR(service + "/32")
+		if err != nil {
+			return nil, err
+		}
+		conn.NextHop.SetNextHop(cidr, nextHop)
+		logrus.Info("set next hop: ", cidr, nextHop)
+	}
 
 	conn.SetDealFunc(conn.deal)
 
@@ -106,7 +108,7 @@ func (c *ProxyConn) deal() {
 		// Get nextHop (client or sidecar)
 		nextHop := findNextHop(pkt.GetDst().String(), c.NextHop)
 		if nextHop == nil {
-			connLog.Errorf("cannot get nexthop")
+			connLog.Errorf("cannot get nexthop for %s", pkt.GetDst().String())
 			continue
 		}
 
