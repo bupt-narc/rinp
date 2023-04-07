@@ -39,7 +39,7 @@ func NewProxyConn(
 			return nil, err
 		}
 		conn.NextHop.SetNextHop(cidr, nextHop)
-		logrus.Info("set next hop: ", cidr, nextHop)
+		logrus.Infof("set next hop: %s %s", cidr, nextHop)
 	}
 
 	conn.SetDealFunc(conn.deal)
