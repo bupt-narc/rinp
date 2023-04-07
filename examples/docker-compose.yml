@@ -98,7 +98,7 @@ services:
        - "-c=7.0.0.0/8"
        - "-p=12345"
        - "-s=11.22.33.44"
-       - "--public-ip=service"
+       - "--private-ip=service"
        - "--redis=redis:6379"
     privileged: true
     networks:
@@ -115,7 +115,7 @@ services:
       - "-c=7.0.0.0/8"
       - "-p=12345"
       - "-s=11.22.33.55"
-      - "--public-ip=scheduler"
+      - "--private-ip=scheduler"
       - "--redis=redis:6379"
     privileged: true
     network_mode: service:scheduler

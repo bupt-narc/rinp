@@ -78,7 +78,7 @@ func runCli(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	go selfHeartbeat(opt.ServerVirtualIP.String(), opt.PublicIP, opt.Port)
+	go selfHeartbeat(opt.ServerVirtualIP.String(), opt.PrivateIP, opt.Port)
 
 	conn.Run(ctx)
 

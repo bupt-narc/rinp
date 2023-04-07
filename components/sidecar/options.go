@@ -17,7 +17,7 @@ type Option struct {
 	ServerVirtualIP net.IP
 	ClientCIDRs     []*net.IPNet
 	EnablePProf     bool
-	PublicIP        string
+	PrivateIP       string
 	Redis           string
 }
 
@@ -67,8 +67,8 @@ func (o *Option) WithCliFlags(flags *pflag.FlagSet) *Option {
 	if v, err := flags.GetBool(flagEnablePProf); err == nil && flags.Changed(flagEnablePProf) {
 		o.EnablePProf = v
 	}
-	if v, err := flags.GetString(flagPublicIP); err == nil && flags.Changed(flagPublicIP) {
-		o.PublicIP = v
+	if v, err := flags.GetString(flagPrivateIP); err == nil && flags.Changed(flagPrivateIP) {
+		o.PrivateIP = v
 	}
 	if v, err := flags.GetString(flagRedis); err == nil && flags.Changed(flagRedis) {
 		o.Redis = v
@@ -91,7 +91,7 @@ func (o *Option) Validate() (*Option, error) {
 	if o.ClientCIDRs == nil {
 		return nil, fmt.Errorf("%s is not valid", flagClientCIDRs)
 	}
-	if o.PublicIP == "" {
+	if o.PrivateIP == "" {
 		return nil, fmt.Errorf("public ip should not be empty")
 	}
 	if o.Redis == "" {
