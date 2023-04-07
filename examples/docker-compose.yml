@@ -38,6 +38,9 @@ services:
     container_name: proxy1
     depends_on:
       - redis
+      - service
+      - scheduler
+      - scheduler-sidecar
     expose:
       - 8080
     command:
@@ -56,6 +59,9 @@ services:
     container_name: proxy2
     depends_on:
       - redis
+      - service
+      - scheduler
+      - scheduler-sidecar
     command:
       - "--redis=redis:6379"
       - "--name=proxy2"
@@ -70,6 +76,9 @@ services:
     container_name: proxy3
     depends_on:
       - redis
+      - service
+      - scheduler
+      - scheduler-sidecar
     command:
       - "--redis=redis:6379"
       - "--name=proxy3"
