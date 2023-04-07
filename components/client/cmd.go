@@ -46,7 +46,7 @@ var (
 	defaultServerCIDRs      = []string{"11.22.33.0/24"}
 	defaultEnablePProf      = false
 	defaultAuthBaseURL      = "http://auth:8090"
-	defaultSchedulerAddress = "http://11.22.33.55"
+	defaultSchedulerAddress = "11.22.33.55:5525"
 )
 
 const (

@@ -30,6 +30,8 @@ func (o *Option) WithDefaults() *Option {
 	o.ClientVirtualIP = net.ParseIP(defaultClientVirtualIP)
 	o.ServerCIDRs, _ = overlay.StringToCIDRs(defaultServerCIDRs)
 	o.EnablePProf = defaultEnablePProf
+	o.AuthBaseURL = defaultAuthBaseURL
+	o.SchedulerAddress = defaultSchedulerAddress
 	return o
 }
 
