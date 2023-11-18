@@ -18,9 +18,13 @@ Make sure you Docker, and GNU-Make installed and running on a Linux machine.
 
 Notice the client used an IP that is virtual (meaning RINP is functioning). If nothing goes wrong, you should see the test going. Feel free to raise an issue if you have questions.
 
-## Evaluation Videos
+## Evaluation
+
+### Environment
 
 Evaluation is conducted between Bejing, China and Guangzhou, China with a fixed bandwidth of 10Mbps.
+
+We deploy an `Authenticator`, 2 proxies, a scheduler, and a database on host machines with 2 cores of AMD EPYC 7K62 and 4 GB RAM in Guangzhou. We deploy some `Accessors` in Linux virtual machines in Beijing, each of which has 2 CPUs from a Xeon Silver 4216 CPU. As is known, Beijing and Guangzhou are more than 2100 kilometers apart, which can represent the real network status.
 
 Using TCP:
 
@@ -29,3 +33,17 @@ https://github.com/bupt-narc/rinp/assets/55270174/898364df-e3bf-460a-813c-374803
 Using UDP:
 
 https://github.com/bupt-narc/rinp/assets/55270174/d6be6529-9f17-4ead-8422-dcce909aa0f1
+
+### Result
+
+Latency
+
+<img width="60%" alt="lantency" src="https://github.com/bupt-narc/rinp/assets/20886330/7fa2d57c-89b4-4ae7-82c9-888c18f6c8da"/>
+
+Throughput
+
+<img width="60%" alt="throughput" src="https://github.com/bupt-narc/rinp/assets/20886330/a96ef6fd-3f12-4861-a272-d016916e5f2d"/>
+
+Jitter
+
+<img width="60%" alt="jitter" src="https://github.com/bupt-narc/rinp/assets/20886330/0be46ab2-848f-462d-b91b-06e09b6a77a7"/>
