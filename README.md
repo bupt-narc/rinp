@@ -38,12 +38,12 @@ https://github.com/bupt-narc/rinp/assets/55270174/d6be6529-9f17-4ead-8422-dcce90
 
 Latency
 
-<img width="60%" alt="lantency" src="https://github.com/bupt-narc/rinp/assets/20886330/7fa2d57c-89b4-4ae7-82c9-888c18f6c8da"/>
+<img width="60%" alt="lantency" src="https://github.com/bupt-narc/rinp/assets/20886330/aa21ace8-4225-4575-a9fd-37df1924fdd7"/>
 
 Throughput
 
-<img width="60%" alt="throughput" src="https://github.com/bupt-narc/rinp/assets/20886330/a96ef6fd-3f12-4861-a272-d016916e5f2d"/>
+<img width="60%" alt="throughput" src="https://github.com/bupt-narc/rinp/assets/20886330/1d5b8933-35c9-4ec9-ab51-cb413a38c652"/>
 
 Jitter
 
-<img width="60%" alt="jitter" src="https://github.com/bupt-narc/rinp/assets/20886330/0be46ab2-848f-462d-b91b-06e09b6a77a7"/>
+<img width="60%" alt="jitter" src="https://github.com/bupt-narc/rinp/assets/20886330/48b2a4e8-1ae9-400e-bbc1-3a756bd02a4e"/>
