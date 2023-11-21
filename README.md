@@ -4,7 +4,8 @@ RINP (RINP Is Not a Proxy) is a feasible DDoS defense solution, which can be sea
 
 ## Architecture
 
-![rinp-figure](https://github.com/bupt-narc/rinp/assets/55270174/15d3e314-149d-4d79-8fd9-c83db5edd8e3)
+![rinp-figure](https://github.com/bupt-narc/rinp/assets/55270174/84be1216-26cd-4718-a9c6-859f60fb647a)
+
 
 ## Quick Start
 
@@ -28,11 +29,14 @@ We deploy an `Authenticator`, 2 proxies, a scheduler, and a database on host mac
 
 Using TCP:
 
-https://github.com/bupt-narc/rinp/assets/55270174/898364df-e3bf-460a-813c-3748034aecdc
+
+https://github.com/bupt-narc/rinp/assets/55270174/095dcab8-1150-413d-915f-4cb6b2a1ef25
+
 
 Using UDP:
 
-https://github.com/bupt-narc/rinp/assets/55270174/d6be6529-9f17-4ead-8422-dcce909aa0f1
+https://github.com/bupt-narc/rinp/assets/55270174/44913c71-c296-47da-b075-509e6c87ca47
+
 
 ### Result
 
