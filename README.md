@@ -14,8 +14,8 @@ Make sure you Docker, and GNU-Make installed and running on a Linux machine.
 1. Build a base container image which is useful for testing purposes: `cd examples && make && cd -`
 2. Build RINP components using the base container that we just built: `BASE_IMAGE=netutils make container`
 3. Start RINP: `cd examples && docker compose up`. Check for any errors.
-4. (In a separate terminal) Run a iperf server to test with: `docker run -it service iperf3 -s`
-5. (In a separate terminal) Run a iperf client to test: `docker run -it user iperf3 -c 11.22.33.44`
+4. (In a separate terminal) Run a iperf server to test with: `docker exec -it service iperf3 -s`
+5. (In a separate terminal) Run a iperf client to test: `docker exec -it user iperf3 -c 11.22.33.44`
 
 Notice the client used an IP that is virtual (meaning RINP is functioning). If nothing goes wrong, you should see the test going. Feel free to raise an issue if you have questions.
 
@@ -39,6 +39,10 @@ https://github.com/bupt-narc/rinp/assets/55270174/44913c71-c296-47da-b075-509e6c
 
 
 ### Result
+
+PProf
+
+<img width="100%" alt="pprof" src="https://github.com/bupt-narc/rinp/assets/20886330/afa7d605-7214-4bc2-9864-1ca9f2dfdcc0"/>
 
 Latency
 
