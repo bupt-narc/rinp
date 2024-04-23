@@ -11,11 +11,20 @@ RINP (RINP Is Not a Proxy) is a feasible DDoS defense solution, which can be sea
 
 Make sure you Docker, and GNU-Make installed and running on a Linux machine.
 
+You can simply run the init script:
+
+```shell
+./init.sh
+```
+
+In fact, the script will automatically finish step 1 to step 4 in following:
+
 1. Build a base container image which is useful for testing purposes: `cd examples && make && cd -`
 2. Build RINP components using the base container that we just built: `BASE_IMAGE=netutils make container`
-3. Start RINP: `cd examples && docker compose up`. Check for any errors.
-4. (In a separate terminal) Run a iperf server to test with: `docker exec -it service iperf3 -s`
-5. (In a separate terminal) Run a iperf client to test: `docker exec -it user iperf3 -c 11.22.33.44`
+3. Prepar a test user: `cp examples/demo.db examples/pb_data/data.db`. You can also change it in `Auth` module.
+4. Start RINP: `cd examples && docker compose up`. Check for any errors.
+5. (In a separate terminal) Run a iperf server to test with: `docker exec -it service iperf3 -s`
+6. (In a separate terminal) Run a iperf client to test: `docker exec -it user iperf3 -c 11.22.33.44`
 
 Notice the client used an IP that is virtual (meaning RINP is functioning). If nothing goes wrong, you should see the test going. Feel free to raise an issue if you have questions.
 
@@ -46,7 +55,7 @@ PProf
 
 Latency
 
-<img width="60%" alt="lantency" src="https://github.com/bupt-narc/rinp/assets/20886330/aa21ace8-4225-4575-a9fd-37df1924fdd7"/>
+<img width="60%" alt="latency" src="https://github.com/bupt-narc/rinp/assets/20886330/aa21ace8-4225-4575-a9fd-37df1924fdd7"/>
 
 Throughput
 
