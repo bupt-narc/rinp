@@ -3,19 +3,15 @@ package auth
 import (
 	"context"
 	"fmt"
+	"github.com/bupt-narc/rinp/pkg/util/iplist"
 	"math/rand"
 	"net"
-	"net/http"
 	"os"
 	"time"
 
-	"github.com/bupt-narc/rinp/pkg/util/iplist"
-	"github.com/golang-jwt/jwt/v4"
-	"github.com/labstack/echo/v5"
 	"github.com/pkg/errors"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/models/schema"
@@ -28,15 +24,13 @@ var (
 	ServerCIDR        []string
 	FirstProxyAddress string
 	SchedulerAddress  string
-	redisConn         rueidis.Client
+	redisClient       rueidis.Client
 )
 
 // CLI flags
 var (
 	redisAddr = "redis:6379"
 )
-
-// TODO: make JWT expiry time shorter
 
 func init() {
 	// init seed
@@ -64,73 +58,22 @@ func Execute() error {
 
 	addFlags(app)
 
-	fmt.Printf("auth token valid for %d\n", app.Settings().UserAuthToken.Duration)
-
 	fmt.Println(redisAddr)
-	redisConn, err = rueidis.NewClient(rueidis.ClientOption{
+	redisClient, err = rueidis.NewClient(rueidis.ClientOption{
 		InitAddress: []string{redisAddr},
 		SelectDB:    0,
 	})
 	if err != nil {
 		return err
 	}
-	defer redisConn.Close()
+	defer redisClient.Close()
 
-	app.OnUserAfterCreateRequest().Add(func(e *core.UserCreateEvent) error {
-		userID := e.User.Id
-		user, err := app.Dao().FindUserById(userID)
-		if err != nil {
-			return errors.Wrapf(err, "cannot find user to assign vip")
-		}
-
-		ip, err := UniqueRandomIP(app, UserIPCIDR)
-		if err != nil {
-			return err
-		}
-
-		records, err := app.Dao().FindUserRelatedRecords(user)
-		if err != nil {
-			return errors.Wrapf(err, "cannot find records")
-		}
-		for _, r := range records {
-			r.SetDataValue("vip", ip.String())
-			err := app.Dao().SaveRecord(r)
-			if err != nil {
-				return errors.Wrapf(err, "cannot save record %s", r.Id)
-			}
-		}
-		return nil
-	})
-
-	app.OnUserAuthRequest().Add(func(e *core.UserAuthEvent) error {
-		ctx := context.Background()
-
-		vip := e.User.Profile.GetDataValue("vip").(string)
-
-		token, err := jwt.Parse(e.Token, func(token *jwt.Token) (interface{}, error) {
-			return []byte(e.User.TokenKey + app.Settings().UserAuthToken.Secret), nil
-		})
-		if err != nil {
-			return errors.Wrapf(err, "error when parsing jwt")
-		}
-
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			expireSeconds := int64(claims["exp"].(float64)) - time.Now().Unix()
-			err := redisConn.Do(ctx, redisConn.B().Set().Key(vip).Value(iplist.ToString(FirstProxyAddress)).ExSeconds(expireSeconds).Build()).Error()
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	// create vip filed for user profile
+	// create vip filed for collection users
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 
-		collection, err := app.Dao().FindCollectionByNameOrId("systemprofiles0")
+		collection, err := app.Dao().FindCollectionByNameOrId("users")
 		if err != nil {
-			return errors.Wrapf(err, "cannot find systemprofiles0")
+			return errors.Wrapf(err, "cannot find users")
 		}
 
 		vipField := collection.Schema.GetFieldByName("vip")
@@ -141,10 +84,33 @@ func Execute() error {
 				Name:     "vip",
 				Type:     schema.FieldTypeText,
 				Required: false,
-				Unique:   false,
+				Unique:   true,
 				Options:  nil,
 			})
-
+			collection.Schema.AddField(&schema.SchemaField{
+				System:   true,
+				Id:       RandomString(8),
+				Name:     "serverCIDR",
+				Type:     schema.FieldTypeText,
+				Required: false,
+				Options:  nil,
+			})
+			collection.Schema.AddField(&schema.SchemaField{
+				System:   true,
+				Id:       RandomString(8),
+				Name:     "firstProxyAddress",
+				Type:     schema.FieldTypeText,
+				Required: false,
+				Options:  nil,
+			})
+			collection.Schema.AddField(&schema.SchemaField{
+				System:   true,
+				Id:       RandomString(8),
+				Name:     "schedulerAddress",
+				Type:     schema.FieldTypeText,
+				Required: false,
+				Options:  nil,
+			})
 			err = app.Dao().SaveCollection(collection)
 			if err != nil {
 				return errors.Wrapf(err, "cannot save collection")
@@ -154,28 +120,28 @@ func Execute() error {
 		return nil
 	})
 
-	// add route for server CIDR, first proxy ip, scheduler ip
-	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-		_, err := e.Router.AddRoute(echo.Route{
-			Method: http.MethodGet,
-			Path:   "/api/v1/rinp",
-			Handler: func(c echo.Context) error {
-				return c.JSON(http.StatusOK, map[string]interface{}{
-					"server_cidr":         ServerCIDR,
-					"first_proxy_address": FirstProxyAddress,
-					"scheduler_address":   SchedulerAddress,
-				})
-			},
-			Middlewares: []echo.MiddlewareFunc{apis.RequireAdminOrUserAuth()},
-		})
+	app.OnRecordBeforeCreateRequest("users").Add(func(e *core.RecordCreateEvent) error {
+		e.Record.Set("serverCIDR", ServerCIDR)
+		e.Record.Set("firstProxyAddress", FirstProxyAddress)
+		e.Record.Set("schedulerAddress", SchedulerAddress)
+		ip, err := UniqueRandomIP(app, UserIPCIDR)
 		if err != nil {
-			return errors.Wrapf(err, "cannot add route")
+			return err
+		}
+		e.Record.Set("vip", ip)
+		return nil
+	})
+
+	app.OnRecordAfterAuthWithPasswordRequest().Add(func(e *core.RecordAuthWithPasswordEvent) error {
+		if e.Collection.Name == "users" {
+			host := e.Record.Get("vip").(string)
+			ctx, _ := context.WithCancel(context.Background())
+			redisClient.Do(ctx, redisClient.B().Set().Key(host).Value(iplist.ToString(FirstProxyAddress)).Build()).Error()
 		}
 		return nil
 	})
 
 	app.RootCmd.AddCommand(cmd.NewServeCommand(app, false))
-	app.RootCmd.AddCommand(cmd.NewMigrateCommand(app))
 
 	err = app.Execute()
 
@@ -223,19 +189,14 @@ func RandomIP(cidr *net.IPNet) net.IP {
 }
 
 func UniqueRandomIP(app *pocketbase.PocketBase, cidr *net.IPNet) (net.IP, error) {
-	collection, err := app.Dao().FindCollectionByNameOrId("systemprofiles0")
-	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find systemprofiles0")
-	}
-	//field := collection.Schema.GetFieldByName("vip")
 
-	records, err := app.Dao().FindRecordsByExpr(collection, dbx.Like("vip", ""))
+	records, err := app.Dao().FindRecordsByExpr("users", dbx.Like("vip", ""))
 	if err != nil {
 		return nil, err
 	}
 	ipMap := make(map[string]bool)
 	for _, r := range records {
-		ipStr := r.Data()["vip"].(string)
+		ipStr := r.Get("vip").(string)
 		ipMap[ipStr] = true
 	}
 

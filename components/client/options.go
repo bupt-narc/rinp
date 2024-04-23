@@ -92,13 +92,13 @@ func (o *Option) Validate() (*Option, error) {
 		return nil, err
 	}
 	if o.ProxyAddress == "" {
-		return nil, fmt.Errorf("%s is not valid", flagProxyAddress)
+		return nil, fmt.Errorf("%s is not valid, %v", flagProxyAddress, o.ProxyAddress)
 	}
 	if o.ClientVirtualIP == nil {
-		return nil, fmt.Errorf("%s is not valid", flagClientVirtualIP)
+		return nil, fmt.Errorf("%s is not valid, %v", flagClientVirtualIP, o.ClientVirtualIP)
 	}
 	if o.ServerCIDRs == nil {
-		return nil, fmt.Errorf("%s is not valid", flagClientVirtualIP)
+		return nil, fmt.Errorf("%s is not valid, %v", flagClientVirtualIP, o.ServerCIDRs)
 	}
 	return o, nil
 }
