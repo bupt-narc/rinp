@@ -4,9 +4,7 @@ go 1.21
 
 require (
 	github.com/dboslee/lru v0.0.2-0.20220706221300-40f73e764fbf
-	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/gopacket v1.1.19
-	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/pkg/errors v0.9.1
 	github.com/pocketbase/dbx v1.10.1
 	github.com/pocketbase/pocketbase v0.22.9
@@ -75,6 +73,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
@@ -89,6 +88,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
+	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
