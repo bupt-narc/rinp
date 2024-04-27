@@ -58,7 +58,7 @@ func Execute() error {
 
 	addFlags(app)
 
-	fmt.Println(redisAddr)
+	fmt.Println("redis address", redisAddr)
 	redisClient, err = rueidis.NewClient(rueidis.ClientOption{
 		InitAddress: []string{redisAddr},
 		SelectDB:    0,
@@ -132,12 +132,12 @@ func Execute() error {
 		return nil
 	})
 
-	app.OnRecordAfterAuthWithPasswordRequest().Add(func(e *core.RecordAuthWithPasswordEvent) error {
-		if e.Collection.Name == "users" {
-			host := e.Record.Get("vip").(string)
-			ctx, _ := context.WithCancel(context.Background())
-			redisClient.Do(ctx, redisClient.B().Set().Key(host).Value(iplist.ToString(FirstProxyAddress)).Build()).Error()
-		}
+	app.OnRecordAfterAuthWithPasswordRequest("users").Add(func(e *core.RecordAuthWithPasswordEvent) error {
+		host := e.Record.Get("vip").(string)
+		firstProxyAddress := e.Record.Get("firstProxyAddress").(string)
+		fmt.Sprintf("user %s is assigned to %s", host, firstProxyAddress)
+		ctx, _ := context.WithCancel(context.Background())
+		redisClient.Do(ctx, redisClient.B().Set().Key(host).Value(iplist.ToString(firstProxyAddress)).Build())
 		return nil
 	})
 
