@@ -1,0 +1,49 @@
+version: "3.9"
+services:
+  service:
+    # Virtual IP 11.22.33.44
+    image: rinp/sidecar
+    container_name: service
+    depends_on:
+      - redis
+    ports:
+      - "12345:12345/udp"
+    command:
+      - "-c=7.0.0.0/8"
+      - "-p=12345"
+      - "-s=11.22.33.44"
+      - "--private-ip=172.16.0.8"
+      - "--redis=redis:6379"
+    privileged: true
+
+  scheduler-sidecar:
+    # Virtual IP 11.22.33.55
+    image: rinp/sidecar
+    container_name: scheduler-sidecar
+    depends_on:
+      - redis
+    ports:
+      - "22345:22345/udp"
+    command:
+      - "-c=7.0.0.0/8"
+      - "-p=22345"
+      - "-s=11.22.33.55"
+      - "--private-ip=172.16.0.8"
+      - "--redis=redis:6379"
+    privileged: true
+
+  scheduler:
+    image: rinp/scheduler
+    container_name: scheduler
+    depends_on:
+      - redis
+    command:
+      - "--redis=redis:6379"
+    privileged: true
+    network_mode: service:scheduler-sidecar
+
+  redis:
+    image: redis
+    container_name: rinp-redis
+    ports:
+      - "46379:6379"

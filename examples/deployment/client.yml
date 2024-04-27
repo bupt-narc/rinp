@@ -1,0 +1,8 @@
+services:
+  user:
+    image: rinp/client
+    command:
+      - "--auth-base-url={AUTH_BASE_URL}"
+      - "--log-level=trace"
+    container_name: user
+    privileged: true

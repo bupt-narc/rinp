@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  proxyi:
+    image: rinp/proxy
+    container_name: proxyi
+    ports:
+      - "5114:5114/udp"
+      - "8080:8080"
+    command:
+      - "--redis={REDIS_ADDRESS}:46379"
+      - "--name=proxyi"
+      - "--public-ip=proxyi.domain.com"
+      - "--enable-pprof"
